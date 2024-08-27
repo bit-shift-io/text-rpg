@@ -191,3 +191,55 @@ Ghost
     Abilities: Possession (can attempt to possess a creature, taking control of its body)
 
 Feel free to adjust any details as needed to fit your campaign or to enhance the adventure!
+
+
+
+RESPONSE (Meta AI/Llama):
+
+Let's create a setup for your Dungeon and Dragons game. Here's a sample setup:
+Rooms
+---
+Room number: 1
+Name: Entrance Hall
+Description: A grand entrance hall with a large wooden door and a chandelier.
+Monsters: Goblin, Skeleton
+Items: Torch, Rusty Sword
+---
+Room number: 2
+Name: Dark Corridor
+Description: A narrow and dark corridor with cobwebs.
+Monsters: Giant Spider, Bat
+Items: Shield, Healing Potion
+---
+Room number: 3
+Name: Treasure Room
+Description: A room filled with treasure and gold.
+Monsters: Dragon
+Items: Golden Sword, Treasure Chest
+Room Connections
+---
+Room Connections: Entrance Hall, Dark Corridor
+---
+Room Connections: Dark Corridor, Treasure Room
+Monsters
+---
+Monster name: Goblin
+Description: A small and mischievous creature.
+Abilities: Poison Attack, Stealth
+---
+Monster name: Skeleton
+Description: An undead creature with a sword.
+Abilities: Undead, Sword Attack
+---
+Monster name: Giant Spider
+Description: A large and poisonous spider.
+Abilities: Web Attack, Poison
+---
+Monster name: Bat
+Description: A small flying creature.
+Abilities: Flight, Sonar
+---
+Monster name: Dragon
+Description: A large and fire-breathing creature.
+Abilities: Fire Breath, Flight, Scales
+Let me know if you'd like to add more rooms, monsters, or items! I can also modify the existing setup to fit your game's needs.
