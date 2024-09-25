@@ -1,0 +1,17 @@
+[package]
+name = "text-rpg"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+headjack = "0.4.0"
+kalosm = { git = "https://github.com/floneum/floneum", version = "0.3.2", features = ["full"] }
+matrix-sdk = "0.7.1"
+tokio = { version = "1.40.0", features = ["full"] }
+tracing = "0.1.40"
+
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "target-feature=-avx,-avx2"]
