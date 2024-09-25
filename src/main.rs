@@ -1,5 +1,7 @@
-use kalosm::language::*;
+use std::fs::{self, File};
+
 use headjack::*;
+use kalosm::language::{Chat, Llama};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::MessagesOptions,
@@ -9,26 +11,32 @@ use matrix_sdk::{
     },
     Room, RoomMemberships,
 };
+use serde::Deserialize;
 use tracing::{error, info};
 
-#[tokio::main]
-async fn main() -> Result<(), String> {
-    let model = Llama::new_chat().await.unwrap();
+#[derive(Debug, Deserialize, Clone)]
+pub struct Config {
+    username: String,
+    password: String,
+}
 
-    // construct LLM chat model
-    let mut chat = Chat::builder(model)
-        .with_system_prompt("The assistant will act like a pirate")
-        .build();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
+    
+    let mut file_contents = fs::read_to_string("config.yml").expect("Unable to read config.yml");
+    let config: Config = serde_yml::from_str(&file_contents).unwrap();
+/* 
+    let model = Llama::new_chat().await.unwrap();
 
     // see example usage here on how to load from config: https://github.com/arcuru/chaz/blob/main/src/main.rs
     let bot_config = BotConfig {
         login: Login {
             homeserver_url: "matrix.org".to_string(),
-            username: "".to_string(),
-            password: Some("".to_string()),
+            username: config.username,
+            password: Some(config.password),
         },
         allow_list: None,
-        state_dir: None,
+        state_dir: Some("~/text-rpg".to_string()),
         command_prefix: None,
         room_size_limit: None,
         name: None,
@@ -36,7 +44,8 @@ async fn main() -> Result<(), String> {
     let mut bot = Bot::new(bot_config).await;
 
     if let Err(e) = bot.login().await {
-        error!("Error logging in: {e}");
+        println!("Error logging in: {e}");
+        return e;
     }
 
 
@@ -51,6 +60,11 @@ async fn main() -> Result<(), String> {
     }
 
     info!("The client is ready! Listening to new messages…");
+
+    // construct LLM chat model
+    let mut chat = Chat::builder(model)
+        .with_system_prompt("The assistant will act like a pirate")
+        .build();
 
     // The party command is from the matrix-rust-sdk examples
     // Keeping it as an easter egg
@@ -75,34 +89,36 @@ async fn main() -> Result<(), String> {
         |sender, body, room| async move {
 
             let response = "qwe"; //chat.add_message(body).all_text().await;
-/* 
-                .to_std_out()
-                .await
-                .unwrap();
-*/
+
             let content = RoomMessageEventContent::notice_plain(response);
             room.send(content).await.unwrap();
             Ok(())
         },
     )
     .await;
+*/
 
 
+
+
+/* 
     // Run the bot, this should never return except on error
     if let Err(e) = bot.run().await {
         error!("Error running bot: {e}");
     }
+*/
 
-    /*
-    
-    
+   /* 
     loop {
-        chat.add_message(prompt_input("\n> ").unwrap())
-            .to_std_out()
-            .await
-            .unwrap();
-    }
-     */
+        
 
+    }*/
+/* 
+    let prompt = prompt_input("\n> ").unwrap();
+
+        let mut response_stream = chat.add_message(prompt);
+        // And then stream the result to std out
+        response_stream.to_std_out().await.unwrap();
+*/
     Ok(())
 }
