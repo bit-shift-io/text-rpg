@@ -1,7 +1,7 @@
 use std::{fmt, fs::{self, File}};
 
 use headjack::*;
-//use kalosm::language::{Chat, Llama};
+use kalosm::{language::{Chat, Llama}, sound::TextStream};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::MessagesOptions,
@@ -34,7 +34,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
 
     //println!("config: {}", config);
 
-    //let model = Llama::new_chat().await.unwrap();
 
     // see example usage here on how to load from config: https://github.com/arcuru/chaz/blob/main/src/main.rs
     let bot_config = BotConfig {
@@ -68,12 +67,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     }
 
     info!("The client is ready! Listening to new messages…");
-/*
+
+
+    let model = Llama::new_chat().await.unwrap();
+
     // construct LLM chat model
     let mut chat = Chat::builder(model)
         .with_system_prompt("The assistant will act like a pirate")
         .build();
-*/
+
     // The party command is from the matrix-rust-sdk examples
     // Keeping it as an easter egg
     // TODO: Remove `party` from the help text
@@ -94,9 +96,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         "ask",
         "".to_string(),
         "Ask a question".to_string(),
-        |sender, body, room| async move {
+        |_sender, body, room| async move {
 
-            let response = format!("You asked: {}", body); //chat.add_message(body).all_text().await;
+            let model = Llama::new_chat().await.unwrap();
+
+            // construct LLM chat model
+            let mut chat = Chat::builder(model)
+                .with_system_prompt("The assistant will act like a pirate")
+                .build();
+
+            //let response = format!("You asked: {}", body); 
+            let response = chat.add_message(body).all_text().await;
 
             let content = RoomMessageEventContent::notice_plain(response);
             room.send(content).await.unwrap();
