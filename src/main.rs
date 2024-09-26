@@ -1,7 +1,7 @@
-use std::fs::{self, File};
+use std::{fmt, fs::{self, File}};
 
 use headjack::*;
-use kalosm::language::{Chat, Llama};
+//use kalosm::language::{Chat, Llama};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::MessagesOptions,
@@ -20,13 +20,21 @@ pub struct Config {
     password: String,
 }
 
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "username: {}, password: {}", self.username, self.password)
+    }
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
+async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> { //anyhow::Error> {
     
     let mut file_contents = fs::read_to_string("config.yml").expect("Unable to read config.yml");
     let config: Config = serde_yml::from_str(&file_contents).unwrap();
-/* 
-    let model = Llama::new_chat().await.unwrap();
+
+    //println!("config: {}", config);
+
+    //let model = Llama::new_chat().await.unwrap();
 
     // see example usage here on how to load from config: https://github.com/arcuru/chaz/blob/main/src/main.rs
     let bot_config = BotConfig {
@@ -60,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     }
 
     info!("The client is ready! Listening to new messages…");
-
+/*
     // construct LLM chat model
     let mut chat = Chat::builder(model)
         .with_system_prompt("The assistant will act like a pirate")
