@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         },
     )
     .await;
-/* 
+ 
 
     bot.register_text_command(
         "ask",
@@ -96,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         "Ask a question".to_string(),
         |sender, body, room| async move {
 
-            let response = "qwe"; //chat.add_message(body).all_text().await;
+            let response = format!("You asked: {}", body); //chat.add_message(body).all_text().await;
 
             let content = RoomMessageEventContent::notice_plain(response);
             room.send(content).await.unwrap();
@@ -104,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         },
     )
     .await;
-*/
+
 
 
 
