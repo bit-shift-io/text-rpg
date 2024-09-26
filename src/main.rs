@@ -27,7 +27,7 @@ impl fmt::Display for Config {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> { //anyhow::Error> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     
     let mut file_contents = fs::read_to_string("config.yml").expect("Unable to read config.yml");
     let config: Config = serde_yml::from_str(&file_contents).unwrap();
@@ -39,13 +39,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> { //anyhow::
     // see example usage here on how to load from config: https://github.com/arcuru/chaz/blob/main/src/main.rs
     let bot_config = BotConfig {
         login: Login {
-            homeserver_url: "matrix.org".to_string(),
+            homeserver_url: "https://matrix.org".to_string(),
             username: config.username,
             password: Some(config.password),
         },
-        allow_list: None,
+        allow_list: Some("(.*)".to_owned()),
         state_dir: Some("~/text-rpg".to_string()),
-        command_prefix: None,
+        command_prefix: Some("!".to_string()),
         room_size_limit: None,
         name: None,
     };
@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> { //anyhow::
 
     if let Err(e) = bot.login().await {
         println!("Error logging in: {e}");
-        return e;
+        return Err(e.into()); // Return the error
     }
 
 
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> { //anyhow::
     let mut chat = Chat::builder(model)
         .with_system_prompt("The assistant will act like a pirate")
         .build();
-
+*/
     // The party command is from the matrix-rust-sdk examples
     // Keeping it as an easter egg
     // TODO: Remove `party` from the help text
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> { //anyhow::
         },
     )
     .await;
-
+/* 
 
     bot.register_text_command(
         "ask",
@@ -109,12 +109,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> { //anyhow::
 
 
 
-/* 
+
     // Run the bot, this should never return except on error
     if let Err(e) = bot.run().await {
         error!("Error running bot: {e}");
     }
-*/
+
 
    /* 
     loop {
@@ -128,5 +128,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> { //anyhow::
         // And then stream the result to std out
         response_stream.to_std_out().await.unwrap();
 */
+    //Ok(())
     Ok(())
 }
