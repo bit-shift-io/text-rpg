@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         },
         allow_list: Some("(.*)".to_owned()),
         state_dir: Some("~/text-rpg".to_string()),
-        command_prefix: Some("dm".to_string()),
+        command_prefix: Some("DM".to_string()), // can we make it case insensiive?
         room_size_limit: None,
         name: None,
     };
