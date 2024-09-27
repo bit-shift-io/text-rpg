@@ -12,6 +12,7 @@ tracing = "0.1.40"
 serde = "1.0"
 serde_yml = "0.0.12"
 lazy_static = "1.5.0"
+bevy_ecs = "0.14.2"
 
 [build]
 rustflags = ["-C", "target-cpu=native"]
