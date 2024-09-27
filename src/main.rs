@@ -42,6 +42,12 @@ lazy_static! {
     static ref GLOBAL_MESSAGES: Mutex<HashMap<String, u64>> = Mutex::new(HashMap::new());
 }
 
+/// Returns the backend based on the global config
+pub fn get_ai_chat() -> AiChat {
+    let config = GLOBAL_CONFIG.lock().unwrap().clone().unwrap();
+    AiChat::new("aichat".to_string(), None) //Some("/Users/fabian/Library/Application Support/aichat/".to_owned())) //config.aichat_config_dir.clone())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     tracing_subscriber::fmt::init();
@@ -52,11 +58,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
 
     //println!("config: {}", config);
 
-    /// Returns the backend based on the global config
-    fn get_backend() -> AiChat {
-        let config = GLOBAL_CONFIG.lock().unwrap().clone().unwrap();
-        AiChat::new("aichat".to_string(), None) //Some("/Users/fabian/Library/Application Support/aichat/".to_owned())) //config.aichat_config_dir.clone())
-    }
 
     // see example usage here on how to load from config: https://github.com/arcuru/chaz/blob/main/src/main.rs
     let bot_config = BotConfig {
@@ -155,7 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
                 sender.as_str(),
                 input.replace('\n', " ")
             );
-            if let Ok(result) = get_backend().execute(&None, input.to_string(), Vec::new()) {
+            if let Ok(result) = get_ai_chat().execute(&None, input.to_string(), Vec::new()) {
                 // Add the prefix ".response:\n" to the result
                 // That way we can identify our own responses and ignore them for context
                 info!(
