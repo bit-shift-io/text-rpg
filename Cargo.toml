@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 headjack = "0.4.0"
-kalosm = { git = "https://github.com/floneum/floneum", version = "0.3.2", features = ["full"] }
+#kalosm = { git = "https://github.com/floneum/floneum", version = "0.3.2", features = ["full"] }
 matrix-sdk = "0.7.1"
 tokio = { version = "1.40.0", features = ["full"] }
 tracing = "0.1.40"
@@ -13,6 +13,7 @@ serde = "1.0"
 serde_yml = "0.0.12"
 lazy_static = "1.5.0"
 bevy_ecs = "0.14.2"
+tracing-subscriber = "0.3.18"
 
 [build]
 rustflags = ["-C", "target-cpu=native"]

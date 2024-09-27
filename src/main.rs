@@ -19,6 +19,9 @@ use lazy_static::lazy_static;
 mod aichat;
 use aichat::AiChat;
 
+mod start_a_new_game;
+use start_a_new_game::start_a_new_game;
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     username: String,
@@ -41,7 +44,8 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
-    
+    tracing_subscriber::fmt::init();
+
     let mut file_contents = fs::read_to_string("config.yml").expect("Unable to read config.yml");
     let config: Config = serde_yml::from_str(&file_contents).unwrap();
     *GLOBAL_CONFIG.lock().unwrap() = Some(config.clone());
@@ -63,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         },
         allow_list: Some("(.*)".to_owned()),
         state_dir: Some("~/text-rpg".to_string()),
-        command_prefix: Some("!".to_string()),
+        command_prefix: Some("dm".to_string()),
         room_size_limit: None,
         name: None,
     };
@@ -110,8 +114,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         },
     )
     .await;
- 
 
+    bot.register_text_command(
+        "start",
+        "".to_string(),
+        "Start / restart a new game".to_string(),
+        start_a_new_game,
+    )
+    .await;
+ 
     bot.register_text_command(
         "ask",
         "".to_string(),
