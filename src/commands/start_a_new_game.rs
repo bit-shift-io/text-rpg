@@ -37,22 +37,45 @@ struct RoomConnectionInfo {
     connected_rooms: Vec<usize>,
 }
 
-fn extract_json_from_response(text: &str) -> Vec<&str> {
+fn extract_json_from_response(hay: &str) -> Vec<&str> {
     // todo: this could be improved, it doesnt match the ending ``` string properly
-    let re = Regex::new(r"```json([^(````)]+)```").unwrap();
+    let re = Regex::new(r"```json([\s\S]+)```").unwrap(); // ``json([^(````)]+)```
 
-    let mut results = vec![];
-    for (_, [path, lineno, line]) in re.captures_iter(text).map(|c| c.extract()) {
-        results.push(line);
-        //results.push((path, lineno.parse::<u64>()?, line));
-    }
+    let results: Vec<&str> = re.captures_iter(hay).map(|caps| {
+        let (_, [json]) = caps.extract();
+        json.trim()
+    }).collect();
 
     results
 }
 
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    extern crate test;
+    use test::Bencher;
+
+    #[test]
+    fn test_extract_json_from_response() {
+        let text = r#"
+            blah blah 
+            ```json
+            {} 
+            ```
+            some other text
+        "#;
+        let results = extract_json_from_response(text);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0], "{}");
+    }
+}
+
+
 pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
-    room.send(RoomMessageEventContent::notice_plain("Starting a new game. Let me think about for a bit.")).await.unwrap();
+    room.send(RoomMessageEventContent::notice_plain("Let me go grab the game and set it up...")).await.unwrap();
 
     let prompt = r#"
         I am a dungeon master. I need to create a setup for the game.
@@ -106,13 +129,14 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
     "#;
 
     if let Ok(result) = get_ai_chat().execute(&None, prompt.to_string(), Vec::new()) {
+        /* 
         // Add the prefix ".response:\n" to the result
         // That way we can identify our own responses and ignore them for context
         info!(
             "Response: {} - {}",
             sender.as_str(),
-            result//.replace('\n', " ")
-        );
+            result.replace('\n', " ")
+        );*/
 
         let json_strs = extract_json_from_response(&result);
         if json_strs.len() == 0 {
@@ -120,6 +144,11 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
             return Ok(());
         }
         
+        info!(
+            "MapInfo JSON: {}",
+            json_strs[0].replace('\n', " ")
+        );
+
         if let Ok(map_info) = serde_json::from_str::<String>(&json_strs[0]) {   
 
             let content = RoomMessageEventContent::notice_plain(result);
