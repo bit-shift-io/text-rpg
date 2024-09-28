@@ -1,8 +1,10 @@
+#![allow(dead_code, unused_variables, unused_imports)]
+
 use std::{fmt, fs::{self, File}};
 use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
 
+use config::Config;
 use headjack::*;
-//use kalosm::{language::{Chat, Llama}, sound::TextStream};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::MessagesOptions,
@@ -19,44 +21,35 @@ use lazy_static::lazy_static;
 mod aichat;
 use aichat::AiChat;
 
-mod start_a_new_game;
-use start_a_new_game::start_a_new_game;
+mod globals;
+use globals::*;
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct Config {
-    username: String,
-    password: String,
+mod config;
+
+mod commands {
+    pub mod start_a_new_game;
 }
 
-impl fmt::Display for Config {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "username: {}, password: {}", self.username, self.password)
-    }
+mod components {
+    pub mod character;
+    pub mod player;
+    pub mod room_connection;
+    pub mod room;
 }
 
-lazy_static! {
-    /// Holds the config for the bot
-    static ref GLOBAL_CONFIG: Mutex<Option<Config>> = Mutex::new(None);
+use commands::start_a_new_game::start_a_new_game;
 
-    /// Count of the global messages per user
-    static ref GLOBAL_MESSAGES: Mutex<HashMap<String, u64>> = Mutex::new(HashMap::new());
-}
 
-/// Returns the backend based on the global config
-pub fn get_ai_chat() -> AiChat {
-    let config = GLOBAL_CONFIG.lock().unwrap().clone().unwrap();
-    AiChat::new("aichat".to_string(), None) //Some("/Users/fabian/Library/Application Support/aichat/".to_owned())) //config.aichat_config_dir.clone())
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     tracing_subscriber::fmt::init();
 
-    let mut file_contents = fs::read_to_string("config.yml").expect("Unable to read config.yml");
+    let file_contents = fs::read_to_string("config.yml").expect("Unable to read config.yml");
     let config: Config = serde_yml::from_str(&file_contents).unwrap();
     *GLOBAL_CONFIG.lock().unwrap() = Some(config.clone());
 
-    //println!("config: {}", config);
+    info!("config: {}", config);
 
 
     // see example usage here on how to load from config: https://github.com/arcuru/chaz/blob/main/src/main.rs
@@ -75,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     let mut bot = Bot::new(bot_config).await;
 
     if let Err(e) = bot.login().await {
-        println!("Error logging in: {e}");
+        error!("Error logging in: {e}");
         return Err(e.into()); // Return the error
     }
 
@@ -92,14 +85,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
 
     info!("The client is ready! Listening to new messages…");
 
-/* 
-    let model = Llama::new_chat().await.unwrap();
-
-    // construct LLM chat model
-    let mut chat = Chat::builder(model)
-        .with_system_prompt("The assistant will act like a pirate")
-        .build();
-*/
 
     // The party command is from the matrix-rust-sdk examples
     // Keeping it as an easter egg
@@ -136,20 +121,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
                 .skip(1)
                 .collect::<Vec<&str>>()
                 .join(" ");
-            /* *
-            let model = Llama::new_chat().await.unwrap();
-
-            // construct LLM chat model
-            let mut chat = Chat::builder(model)
-                .with_system_prompt("The assistant will act like a pirate")
-                .build();
-
-            //let response = format!("You asked: {}", body); 
-            let response = chat.add_message(body).all_text().await;
-            */
-
-
-            //let model = Some("gemini".to_owned()); // todo: move to config
 
             info!(
                 "Request: {} - {}",
@@ -178,28 +149,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     .await;
 
 
-
-
-
-
     // Run the bot, this should never return except on error
     if let Err(e) = bot.run().await {
         error!("Error running bot: {e}");
     }
 
-
-   /* 
-    loop {
-        
-
-    }*/
-/* 
-    let prompt = prompt_input("\n> ").unwrap();
-
-        let mut response_stream = chat.add_message(prompt);
-        // And then stream the result to std out
-        response_stream.to_std_out().await.unwrap();
-*/
-    //Ok(())
     Ok(())
 }
