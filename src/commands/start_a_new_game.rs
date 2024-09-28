@@ -1,3 +1,5 @@
+
+use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::MessagesOptions,
@@ -7,7 +9,6 @@ use matrix_sdk::{
     },
     Room as MatrixRoom, RoomMemberships,
 };
-use tracing::info;
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 
@@ -50,28 +51,6 @@ fn extract_json_from_response(hay: &str) -> Vec<&str> {
 }
 
 
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    extern crate test;
-    use test::Bencher;
-
-    #[test]
-    fn test_extract_json_from_response() {
-        let text = r#"
-            blah blah 
-            ```json
-            {} 
-            ```
-            some other text
-        "#;
-        let results = extract_json_from_response(text);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0], "{}");
-    }
-}
 
 
 pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
@@ -149,25 +128,149 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
             json_strs[0].replace('\n', " ")
         );
 
-        if let Ok(map_info) = serde_json::from_str::<String>(&json_strs[0]) {   
+        let value = match serde_json::from_str::<MapInfo>(&json_strs[0]) { 
+            Ok(map_info) => {
+                let content = RoomMessageEventContent::notice_plain(result);
 
-            let content = RoomMessageEventContent::notice_plain(result);
-
-            room.send(content).await.unwrap();
-        
-
-            //let mut world = GLOBAL_WORLD.lock().unwrap();
-            //world.spawn(Room {});
-
-
-            room.send(RoomMessageEventContent::notice_plain("Okay, a new game is ready. Let's begin.")).await.unwrap();
-            //return Ok(())
+                room.send(content).await.unwrap();
+            
+    
+                //let mut world = GLOBAL_WORLD.lock().unwrap();
+                //world.spawn(Room {});
+    
+    
+                room.send(RoomMessageEventContent::notice_plain("Okay, a new game is ready. Let's begin.")).await.unwrap();
+                //return Ok(())
+            },
+            Err(err) => {
+                error!("Error parsing json: {err}");
+            }
+        };
+/* 
+            
         } else {
             room.send(RoomMessageEventContent::notice_plain("Failed to parse the map info.")).await.unwrap();
-        }
+        }*/
     } else {
         room.send(RoomMessageEventContent::notice_plain("Failed to prompt aichat.")).await.unwrap();
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    extern crate test;
+    use test::Bencher;
+
+
+    #[test]
+    fn test_extract_json_from_response() {
+        let text = r#"
+            blah blah 
+            ```json
+            {} 
+            ```
+            some other text
+        "#;
+        let results = extract_json_from_response(text);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0], "{}");
+    }
+
+
+    #[test]
+    fn test_can_parse_map_info() {
+        let text = r#"{
+            "rooms": [
+                {
+                "room_number": 1,
+                "name": "Entrance Hall",
+                "description": "A grand hall with a high vaulted ceiling. Dust covers the mosaic tiles on the floor and cobwebs cling to the corners. Two large, rusted iron doors stand at the far end of the hall.",
+                "monsters": [
+                    "Giant Spider",
+                    "Giant Spider"
+                ],
+                "items": [
+                    "Dusty old tapestry",
+                    "Silver key"
+                ]
+                },
+                {
+                "room_number": 2,
+                "name": "The Armory",
+                "description": "Weapons of all kinds line the walls, though most are rusted and dull with age. Broken arrows litter the floor, remnants of a past battle.",
+                "monsters": [],
+                "items": [
+                    "Rusty sword",
+                    "Broken bow",
+                    "Quiver of arrows (5 arrows)"
+                ]
+                },
+                {
+                "room_number": 3,
+                "name": "The Throne Room",
+                "description": "A massive throne of bone sits atop a dais at the far end of the room. A single flickering torch casts eerie shadows on the walls.",
+                "monsters": [
+                    "Skeleton King"
+                ],
+                "items": [
+                    "Skeleton King's Crown",
+                    "Chest of gold (100 gold pieces)"
+                ]
+                }
+            ],
+            "monsters": [
+                {
+                "name": "Giant Spider",
+                "description": "A large, hairy spider with eight eyes and venomous fangs.",
+                "abilities": [
+                    "Web attack (restrains target)",
+                    "Poison bite"
+                ]
+                },
+                {
+                "name": "Skeleton King",
+                "description": "An animated skeleton clad in rusted armor, wielding a bone-chilling sword.",
+                "abilities": [
+                    "Undead Fortitude (resistance to bludgeoning damage)",
+                    "Fear Aura (causes fear in nearby creatures)"
+                ]
+                }
+            ],
+            "room_connections": [
+                {
+                "room_number": 1,
+                "connected_rooms": [
+                    2,
+                    3
+                ]
+                },
+                {
+                "room_number": 2,
+                "connected_rooms": [
+                    1
+                ]
+                },
+                {
+                "room_number": 3,
+                "connected_rooms": [
+                    1
+                ]
+                }
+            ]
+        }"#;
+
+        let value = match serde_json::from_str::<MapInfo>(&text) { 
+            Ok(map_info) => {
+                println!("Ok parsing json");
+            },
+            Err(err) => {
+                println!("Error parsing json: {err}");
+                assert!(false);
+            }
+        };
+    }
 }
