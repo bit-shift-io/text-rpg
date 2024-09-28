@@ -2819,6 +2819,7 @@ name = "text-rpg"
 version = "0.1.0"
 dependencies = [
  "bevy_ecs",
+ "bevy_reflect",
  "headjack",
  "lazy_static",
  "matrix-sdk",

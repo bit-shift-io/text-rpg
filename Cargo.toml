@@ -16,6 +16,7 @@ bevy_ecs = "0.14.2"
 tracing-subscriber = "0.3.18"
 serde_json = "1.0.128"
 regex = "1.10.6"
+bevy_reflect = "0.14.2"
 
 [build]
 rustflags = ["-C", "target-cpu=native"]

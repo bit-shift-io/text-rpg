@@ -1,6 +1,11 @@
-use bevy_ecs::prelude::*;
+// https://abadcafe.wordpress.com/2020/12/13/serializing-bevy-ecs-using-reflect-trait/
+// This allows to introspect and serialize components tagged with:
 
-#[derive(Component)]
+
+use bevy_ecs::prelude::*;
+use bevy_reflect::Reflect;
+
+#[derive(Component, Reflect, Debug)]
 pub struct Room {
 
 }

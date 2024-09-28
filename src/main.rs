@@ -29,6 +29,7 @@ mod config;
 
 mod commands {
     pub mod start_a_new_game;
+    pub mod dump_world;
 }
 
 mod components {
@@ -38,7 +39,7 @@ mod components {
     pub mod room;
 }
 
-use commands::start_a_new_game::start_a_new_game;
+use commands::{dump_world::dump_world, start_a_new_game::start_a_new_game};
 
 
 
@@ -105,8 +106,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     bot.register_text_command(
         "start",
         "".to_string(),
-        "Start / restart a new game".to_string(),
+        "Start a new game".to_string(),
         start_a_new_game,
+    )
+    .await;
+
+    bot.register_text_command(
+        "dump",
+        "".to_string(),
+        "Dump world".to_string(),
+        dump_world,
     )
     .await;
  
