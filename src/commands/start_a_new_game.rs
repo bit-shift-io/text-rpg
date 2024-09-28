@@ -134,9 +134,9 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
 
                 room.send(content).await.unwrap();
             
-    
-                //let mut world = GLOBAL_WORLD.lock().unwrap();
-                //world.spawn(Room {});
+                // https://github.com/bevyengine/bevy/discussions/15486
+                let mut world = GLOBAL_WORLD.lock().unwrap(); // Error cause by this line.
+                world.spawn(Room {});
     
     
                 room.send(RoomMessageEventContent::notice_plain("Okay, a new game is ready. Let's begin.")).await.unwrap();
