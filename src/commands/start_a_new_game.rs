@@ -12,7 +12,7 @@ use matrix_sdk::{
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 
-use crate::get_ai_chat;
+use crate::{components::{monster::Monster, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat};
 use crate::globals::*;
 use crate::components::room::Room;
 
@@ -21,6 +21,7 @@ use crate::components::room::Room;
 struct MapInfo {
     rooms: Vec<RoomInfo>,
     room_connections: Vec<RoomConnectionInfo>,
+    monsters: Vec<MonsterInfo>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -36,6 +37,13 @@ struct RoomInfo {
 struct RoomConnectionInfo {
     room_number: usize,
     connected_rooms: Vec<usize>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct MonsterInfo {
+    name: String,
+    description: String,
+    abilities: Vec<String>,
 }
 
 fn extract_json_from_response(hay: &str) -> Vec<&str> {
@@ -97,7 +105,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
         {
             "name": {The name of a monster},
             "description": {A short description of the monster},
-            "abilities": [A comma separated list of special abilties the monster has]
+            "abilities": [A comma separated list of special abilties the monster has],
         }
 
         "room_connections" should be an arry with the following structure:
@@ -108,15 +116,6 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
     "#;
 
     if let Ok(result) = get_ai_chat().execute(&None, prompt.to_string(), Vec::new()) {
-        /* 
-        // Add the prefix ".response:\n" to the result
-        // That way we can identify our own responses and ignore them for context
-        info!(
-            "Response: {} - {}",
-            sender.as_str(),
-            result.replace('\n', " ")
-        );*/
-
         let json_strs = extract_json_from_response(&result);
         if json_strs.len() == 0 {
             room.send(RoomMessageEventContent::notice_plain("Failed to get JSON from response.")).await.unwrap();
@@ -131,27 +130,53 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
         let value = match serde_json::from_str::<MapInfo>(&json_strs[0]) { 
             Ok(map_info) => {
                 let content = RoomMessageEventContent::notice_plain(result);
-
                 room.send(content).await.unwrap();
             
                 {
                     // https://github.com/bevyengine/bevy/discussions/15486
-                    let mut world = GLOBAL_WORLD.lock().unwrap(); // Error cause by this line.
-                    world.spawn(Room {});
+                    let mut world = GLOBAL_WORLD.lock().unwrap();
+
+                    for room_info in &map_info.rooms {
+                        world.spawn(Room {
+                            room_number: room_info.room_number,
+                            name: room_info.name.clone(),
+                            description: room_info.description.clone(),
+                        });
+
+                        // look up and spawn a monster for each one in this room
+                        for monster_name in &room_info.monsters {
+                            for monster_info in &map_info.monsters {
+                                if monster_info.name == *monster_name {
+                                    world.spawn((
+                                        Monster {
+                                            name: monster_info.name.clone(),
+                                            description: monster_info.description.clone()
+                                        },
+                                        RoomLocation {
+                                            room_number: room_info.room_number,
+                                        },
+                                    ));
+                                }
+                            }
+                        }
+                    }
+
+                    for room_connection_info in &map_info.room_connections {
+                        for connected_room_number in &room_connection_info.connected_rooms {
+                            world.spawn(RoomConnection {
+                                room_numbers: [room_connection_info.room_number, *connected_room_number],
+                            });
+                        }
+                    }
                 }
     
                 room.send(RoomMessageEventContent::notice_plain("Okay, a new game is ready. Let's begin.")).await.unwrap();
-                //return Ok(())
             },
             Err(err) => {
                 error!("Error parsing json: {err}");
+                room.send(RoomMessageEventContent::notice_plain("Failed to parse the map info.")).await.unwrap();
             }
         };
-/* 
-            
-        } else {
-            room.send(RoomMessageEventContent::notice_plain("Failed to parse the map info.")).await.unwrap();
-        }*/
     } else {
         room.send(RoomMessageEventContent::notice_plain("Failed to prompt aichat.")).await.unwrap();
     }

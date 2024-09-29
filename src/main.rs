@@ -35,8 +35,10 @@ mod commands {
 mod components {
     pub mod character;
     pub mod player;
+    pub mod monster;
     pub mod room_connection;
     pub mod room;
+    pub mod room_location;
 }
 
 use commands::{dump_world::dump_world, start_a_new_game::start_a_new_game};

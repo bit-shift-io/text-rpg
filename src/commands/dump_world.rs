@@ -63,6 +63,7 @@ pub async fn dump_world(sender: OwnedUserId, text: String, room: MatrixRoom) -> 
             let world = world_guard;
 
             for entity in entities {
+                // this kinda of sucks at the moment, we want to see components and their values
                 let str = format!("{:#?}", world.inspect_entity(entity));
                 strings.push(str);
             }

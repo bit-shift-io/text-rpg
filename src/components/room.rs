@@ -7,5 +7,7 @@ use bevy_reflect::Reflect;
 
 #[derive(Component, Reflect, Debug)]
 pub struct Room {
-
+    pub room_number: usize,
+    pub name: String,
+    pub description: String,
 }
