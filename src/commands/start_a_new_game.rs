@@ -189,8 +189,14 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                     // https://github.com/bevyengine/bevy/discussions/15486
                     let mut world = GLOBAL_WORLD.lock().unwrap();
 
+                    let mut start_room_number = 0;
+
                     // create rooms
                     for room_info in &map_info.rooms {
+                        if room_info.is_start_room {
+                            start_room_number = room_info.room_number;
+                        }
+
                         world.spawn(Room {
                             room_number: room_info.room_number,
                             name: room_info.name.clone(),
@@ -251,7 +257,10 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                             },
                             Inventory {
                                 items: vec![], // todo:
-                            }
+                            },
+                            RoomLocation {
+                                room_number: start_room_number,
+                            },
                         ));
                     }
                 }
