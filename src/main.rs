@@ -33,16 +33,18 @@ mod commands {
 }
 
 mod components {
-    pub mod character;
+    pub mod player_character;
     pub mod player;
     pub mod monster;
     pub mod room_connection;
     pub mod room;
     pub mod room_location;
+    pub mod item;
+    pub mod inventory;
+    pub mod health;
 }
 
 use commands::{dump_world::dump_world, start_a_new_game::start_a_new_game};
-
 
 
 #[tokio::main]
@@ -151,10 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
 
                 room.send(content).await.unwrap();
             }
-            /* 
-            let content = RoomMessageEventContent::notice_plain(response);
-            room.send(content).await.unwrap();
-            */
+
             Ok(())
         },
     )

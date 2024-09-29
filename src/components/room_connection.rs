@@ -3,5 +3,7 @@ use bevy_reflect::Reflect;
 
 #[derive(Component, Reflect, Debug)]
 pub struct RoomConnection {
-    pub room_numbers: [usize; 2],
+    pub connected_room_numbers: Vec<usize>,
+    pub connection_type: String,
+    pub description: String,
 }
