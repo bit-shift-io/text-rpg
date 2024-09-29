@@ -2,14 +2,13 @@
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
-    room::MessagesOptions,
+    room::{MessagesOptions, RoomMember},
     ruma::{
-        events::room::message::{MessageType, RoomMessageEventContent},
-        OwnedUserId,
+        api::client::membership::joined_members, events::room::message::{MessageType, RoomMessageEventContent}, OwnedUserId
     },
     Room as MatrixRoom, RoomMemberships,
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
 use crate::{components::{health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat};
@@ -18,7 +17,7 @@ use crate::components::room::Room;
 
 
 #[derive(Serialize, Deserialize)]
-struct MapInfo {
+struct GameInfo {
     rooms: Vec<RoomInfo>,
     room_connections: Vec<RoomConnectionInfo>,
     monsters: Vec<MonsterInfo>,
@@ -92,7 +91,7 @@ fn extract_json_from_response(hay: &str) -> Vec<&str> {
 
 
 
-const RAW_PROMPT: &str = r#"
+const GAME_INFO_RAW_PROMPT: &str = r#"
 I am a dungeon master. I need to create a setup for the game.
 
 I need the response in JSON format. 
@@ -162,13 +161,36 @@ I need a list of objectives for the players to achive together.
 }
 "#;
 
+const START_STORY_RAW_PROMPT: &str = r#"
+I am a dungeon master. I need a short story to describe:
+-A story which describes the objective
+-Each player and their backstory
+-The starting room for the party to begin their journey
+-A prompt that the players should prompt the DM to take an action
+
+The objectives are:
+${objectives}
+
+The players are:
+${players}
+
+The starting room is called ${room_name} and is described as ${room_description}.
+It has the following monsters: ${room_monsters}.
+"#;
+
 pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
     room.send(RoomMessageEventContent::notice_plain("Let me go grab the game and set it up...")).await.unwrap();
 
-    let num_players = 2; // todo: fix me - get number of players in the channel
-    let prompt = RAW_PROMPT.replace("${num_players}", &num_players.to_string());
+    let joined_members = room.members(RoomMemberships::JOIN).await.unwrap();
+    let player_members: Vec<RoomMember> = joined_members.into_iter().filter(|member| !member.is_account_user()).collect(); // todo: remove self
 
-    if let Ok(result) = get_ai_chat().execute(&None, prompt.to_string(), Vec::new()) {
+    let verbose = text.contains("verbose");
+
+    let num_players = player_members.len(); // todo: fix me - get number of players in the channel
+    let game_info_prompt = GAME_INFO_RAW_PROMPT.replace("${num_players}", &num_players.to_string());
+
+    info!( "GAME_INFO_PROMPT: {}", game_info_prompt);
+    if let Ok(result) = get_ai_chat().execute(&None, game_info_prompt.to_string(), Vec::new()) {
         let json_strs = extract_json_from_response(&result);
         if json_strs.len() == 0 {
             room.send(RoomMessageEventContent::notice_plain("Failed to get JSON from response.")).await.unwrap();
@@ -176,14 +198,17 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
         }
         
         info!(
-            "MapInfo JSON: {}",
+            "GAME_INFO JSON: {}",
             json_strs[0].replace('\n', " ")
         );
 
-        let value = match serde_json::from_str::<MapInfo>(&json_strs[0]) { 
-            Ok(map_info) => {
-                let content = RoomMessageEventContent::notice_plain(result);
-                room.send(content).await.unwrap();
+        let value = match serde_json::from_str::<GameInfo>(&json_strs[0]) { 
+            Ok(game_info) => {
+                // this is just for debugging
+                if verbose {
+                    let content = RoomMessageEventContent::notice_plain(result);
+                    room.send(content).await.unwrap();
+                }
             
                 {
                     // https://github.com/bevyengine/bevy/discussions/15486
@@ -192,7 +217,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                     let mut start_room_number = 0;
 
                     // create rooms
-                    for room_info in &map_info.rooms {
+                    for room_info in &game_info.rooms {
                         if room_info.is_start_room {
                             start_room_number = room_info.room_number;
                         }
@@ -217,7 +242,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
 
                         // look up and spawn a monster for each one in this room
                         for monster_name in &room_info.monsters {
-                            for monster_info in &map_info.monsters {
+                            for monster_info in &game_info.monsters {
                                 if monster_info.name == *monster_name {
                                     world.spawn((
                                         Monster {
@@ -237,7 +262,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                     }
 
                     // create room connections
-                    for room_connection_info in &map_info.room_connections {
+                    for room_connection_info in &game_info.room_connections {
                         world.spawn(RoomConnection {
                             connected_room_numbers: room_connection_info.connected_room_numbers.clone(),
                             connection_type: room_connection_info.connection_type.clone(),
@@ -246,7 +271,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                     }
 
                     // create players
-                    for player_character_info in &map_info.player_characters {
+                    for player_character_info in &game_info.player_characters {
                         world.spawn((
                             PlayerCharacter {
                                 matrix_username: "temp".to_owned(), // todo:
@@ -265,9 +290,30 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                     }
                 }
     
-                room.send(RoomMessageEventContent::notice_plain("Okay, a new game is ready. Let's begin.")).await.unwrap();
+                // build the start game prompt
+                let start_room_idx = game_info.rooms.iter().position(|room_info| room_info.is_start_room == true).unwrap();
+                let start_room_info = &game_info.rooms[start_room_idx];
+                let room_monsters = start_room_info.monsters.clone().into_iter().map(|monster| monster).collect::<Vec<String>>().join(", ");
 
-                // todo: describe the starting room, the quest and each player as a story
+                // include the matrix_usernames in the players string so they get included in the story!
+                // zip the player_characters and player_members to make a nice string representation of the players.
+                let players = game_info.player_characters.into_iter().zip(player_members.into_iter()).map(|(player_character_info, player_member)| format!("A {} with the name of {}", player_character_info.character_type, player_member.display_name().unwrap())).collect::<Vec<String>>().join(". ");
+                
+                let objectives = game_info.objectives.into_iter().map(|objective| objective.goal).collect::<Vec<String>>().join(". ");
+                let start_story_prompt = START_STORY_RAW_PROMPT
+                    .replace("${objectives}", &objectives.to_string())
+                    .replace("${players}", &players.to_string())
+                    .replace("${room_name}", &start_room_info.name)
+                    .replace("${room_description}", &start_room_info.description)
+                    .replace("${room_monsters}", &room_monsters);
+
+                info!( "START_STORY_PROMPT: {}", start_story_prompt);
+                if let Ok(result) = get_ai_chat().execute(&None, start_story_prompt.to_string(), Vec::new()) {
+                    info!( "START_STORY: {}", result);
+                    room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
+                } else {
+                    room.send(RoomMessageEventContent::notice_plain("Okay, a new game is ready. Let's begin.")).await.unwrap();
+                }
             },
             Err(err) => {
                 error!("Error parsing json: {err}");
@@ -305,7 +351,7 @@ mod tests {
 
 
     #[test]
-    fn test_can_parse_map_info() {
+    fn test_can_parse_game_info() {
         let text = r#"{
             "rooms": [
                 {
@@ -386,8 +432,8 @@ mod tests {
             ]
         }"#;
 
-        let value = match serde_json::from_str::<MapInfo>(&text) { 
-            Ok(map_info) => {
+        let value = match serde_json::from_str::<GameInfo>(&text) { 
+            Ok(game_info) => {
                 println!("Ok parsing json");
             },
             Err(err) => {
