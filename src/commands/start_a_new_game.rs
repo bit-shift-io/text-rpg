@@ -1,4 +1,5 @@
 
+use bevy_reflect::Reflect;
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -11,13 +12,13 @@ use matrix_sdk::{
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{components::{health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat};
+use crate::{components::{game_info_container::GameInfoContainer, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat};
 use crate::globals::*;
 use crate::components::room::Room;
 
 
-#[derive(Serialize, Deserialize)]
-struct GameInfo {
+#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
+pub struct GameInfo {
     rooms: Vec<RoomInfo>,
     room_connections: Vec<RoomConnectionInfo>,
     monsters: Vec<MonsterInfo>,
@@ -25,7 +26,7 @@ struct GameInfo {
     objectives: Vec<ObjectiveInfo>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
 struct RoomInfo {
     room_number: usize,
     name: String,
@@ -36,14 +37,14 @@ struct RoomInfo {
     is_end_room: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
 struct RoomConnectionInfo {
     connected_room_numbers: Vec<usize>,
     connection_type: String,
     description: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
 struct MonsterInfo {
     name: String,
     description: String,
@@ -57,7 +58,7 @@ struct MonsterInfo {
     wisdom: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
 struct PlayerCharacterInfo {
     matrix_display_name: String,
     character_class: String,
@@ -71,14 +72,15 @@ struct PlayerCharacterInfo {
     wisdom: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
 struct ObjectiveInfo {
     goal: String,
     items: Vec<String>,
     monsters: Vec<String>,
 }
 
-fn extract_json_from_response(hay: &str) -> Vec<&str> {
+// todo: move to a util class
+pub fn extract_json_from_response(hay: &str) -> Vec<&str> {
     // todo: this could be improved, it doesnt match the ending ``` string properly
     let re = Regex::new(r"```json([\s\S]+)```").unwrap(); // ``json([^(````)]+)```
 
@@ -232,6 +234,11 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                 {
                     // https://github.com/bevyengine/bevy/discussions/15486
                     let mut world = GLOBAL_WORLD.lock().unwrap();
+
+                    // store the whole game info struct
+                    world.spawn(GameInfoContainer {
+                        game_info: game_info.clone(),
+                    });
 
                     let mut start_room_number = 0;
 

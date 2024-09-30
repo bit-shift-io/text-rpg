@@ -30,6 +30,7 @@ mod config;
 mod commands {
     pub mod start_a_new_game;
     pub mod dump_world;
+    pub mod act;
 }
 
 mod components {
@@ -42,9 +43,10 @@ mod components {
     pub mod item;
     pub mod inventory;
     pub mod health;
+    pub mod game_info_container;
 }
 
-use commands::{dump_world::dump_world, start_a_new_game::start_a_new_game};
+use commands::{act::act, dump_world::dump_world, start_a_new_game::start_a_new_game};
 
 
 #[tokio::main]
@@ -92,9 +94,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     info!("The client is ready! Listening to new messages…");
 
 
-    // The party command is from the matrix-rust-sdk examples
-    // Keeping it as an easter egg
-    // TODO: Remove `party` from the help text
     bot.register_text_command(
         "party",
         "".to_string(),
@@ -112,6 +111,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         "".to_string(),
         "Start a new game".to_string(),
         start_a_new_game,
+    )
+    .await;
+
+    bot.register_text_command(
+        "act",
+        "".to_string(),
+        "Perform some action".to_string(),
+        act,
     )
     .await;
 
