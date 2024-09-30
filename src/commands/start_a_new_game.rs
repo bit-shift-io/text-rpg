@@ -59,7 +59,8 @@ struct MonsterInfo {
 
 #[derive(Serialize, Deserialize)]
 struct PlayerCharacterInfo {
-    character_type: String,
+    matrix_display_name: String,
+    character_class: String,
     abilities: Vec<String>,
     items: Vec<String>,
     health: u32,
@@ -136,11 +137,12 @@ I need a list of monsters with any special abilities they might have.
 }
 
 I need a list of player characters that describe the character for each player who is playing.
-There are ${num_players} players.
+There are ${num_players} players. The names of the players are: ${player_names}.
 
 "player_characters" should be an arry with the following structure:
 {
-    "character_type": {The type of character, eg. Barbarian},
+    "matrix_display_name": {The player name to assign this character too},
+    "character_class": {The character class},
     "abilities": [A comma separated list of special abilties the character has],
     "items": [A comma separated list of items the character has],
     "health: {The start health of the character},
@@ -159,6 +161,8 @@ I need a list of objectives for the players to achive together.
     "items": [A comma separated list of items required to complete the objective],
     "monsters: [A comma separated list of monsters required to complete the objective]
 }
+
+${extra_user_prompt}
 "#;
 
 const START_STORY_RAW_PROMPT: &str = r#"
@@ -181,15 +185,31 @@ It has the following monsters: ${room_monsters}.
 pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
     room.send(RoomMessageEventContent::notice_plain("Let me go grab the game and set it up...")).await.unwrap();
 
-    let joined_members = room.members(RoomMemberships::JOIN).await.unwrap();
-    let player_members: Vec<RoomMember> = joined_members.into_iter().filter(|member| !member.is_account_user()).collect(); // todo: remove self
-
     let verbose = text.contains("verbose");
 
-    let num_players = player_members.len(); // todo: fix me - get number of players in the channel
-    let game_info_prompt = GAME_INFO_RAW_PROMPT.replace("${num_players}", &num_players.to_string());
+    // any text left over should be feed to the gmae info prompt to let the user modify the game
+    // for example, they might want to assign certain character classes to certain players or setup a theme for the 
+    // game
+    let extra_user_prompt = text
+        .replace("DM", "")
+        .replace("start", "")
+        .replace("verbose", "");
+
+    let joined_members = room.members(RoomMemberships::JOIN).await.unwrap();
+    let player_members: Vec<RoomMember> = joined_members.into_iter().filter(|member| !member.is_account_user()).collect(); // todo: remove self
+    let num_players = player_members.len();
+    let player_names_str = player_members.clone().into_iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect::<Vec<String>>().join(", ");
+    
+    let game_info_prompt = GAME_INFO_RAW_PROMPT
+        .replace("${num_players}", &num_players.to_string())
+        .replace("${player_names}", &player_names_str.to_string())
+        .replace("${extra_user_prompt}", &extra_user_prompt.to_string());
 
     info!( "GAME_INFO_PROMPT: {}", game_info_prompt);
+    if verbose {
+        room.send(RoomMessageEventContent::notice_plain(game_info_prompt.clone())).await.unwrap();
+    }
+
     if let Ok(result) = get_ai_chat().execute(&None, game_info_prompt.to_string(), Vec::new()) {
         let json_strs = extract_json_from_response(&result);
         if json_strs.len() == 0 {
@@ -206,8 +226,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
             Ok(game_info) => {
                 // this is just for debugging
                 if verbose {
-                    let content = RoomMessageEventContent::notice_plain(result);
-                    room.send(content).await.unwrap();
+                    room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
                 }
             
                 {
@@ -272,10 +291,14 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
 
                     // create players
                     for player_character_info in &game_info.player_characters {
+                        let member_idx = player_members.iter().position(|player_member| player_member.display_name().unwrap() == player_character_info.matrix_display_name).unwrap();
+                        let player_member = &player_members[member_idx];
+                        let matrix_username = player_member.user_id().as_str();
+
                         world.spawn((
                             PlayerCharacter {
-                                matrix_username: "temp".to_owned(), // todo:
-                                character_type: player_character_info.character_type.clone(),
+                                matrix_username: matrix_username.to_owned(),
+                                character_class: player_character_info.character_class.clone(),
                             },
                             Health {
                                 health: player_character_info.health,
@@ -297,7 +320,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
 
                 // include the matrix_usernames in the players string so they get included in the story!
                 // zip the player_characters and player_members to make a nice string representation of the players.
-                let players = game_info.player_characters.into_iter().zip(player_members.into_iter()).map(|(player_character_info, player_member)| format!("A {} with the name of {}", player_character_info.character_type, player_member.display_name().unwrap())).collect::<Vec<String>>().join(". ");
+                let players = game_info.player_characters.into_iter().zip(player_members.into_iter()).map(|(player_character_info, player_member)| format!("A {} with the name of {}", player_character_info.character_class, player_member.display_name().unwrap())).collect::<Vec<String>>().join(". ");
                 
                 let objectives = game_info.objectives.into_iter().map(|objective| objective.goal).collect::<Vec<String>>().join(". ");
                 let start_story_prompt = START_STORY_RAW_PROMPT
@@ -308,6 +331,10 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                     .replace("${room_monsters}", &room_monsters);
 
                 info!( "START_STORY_PROMPT: {}", start_story_prompt);
+                if verbose {
+                    room.send(RoomMessageEventContent::notice_plain(start_story_prompt.clone())).await.unwrap();
+                }
+
                 if let Ok(result) = get_ai_chat().execute(&None, start_story_prompt.to_string(), Vec::new()) {
                     info!( "START_STORY: {}", result);
                     room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
