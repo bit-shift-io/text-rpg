@@ -2,7 +2,7 @@ use bevy_ecs::world::World;
 use lazy_static::lazy_static;
 use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
 
-use crate::{aichat::AiChat, config::Config};
+use crate::{config::Config, lib::aichat::AiChat};
 
 lazy_static! {
     /// Holds the config for the bot

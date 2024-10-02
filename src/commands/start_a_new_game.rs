@@ -12,85 +12,9 @@ use matrix_sdk::{
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{components::{game_info_container::GameInfoContainer, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat};
+use crate::{components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::extract_json_from_response::extract_json_from_response};
 use crate::globals::*;
 use crate::components::room::Room;
-
-
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
-pub struct GameInfo {
-    rooms: Vec<RoomInfo>,
-    room_connections: Vec<RoomConnectionInfo>,
-    monsters: Vec<MonsterInfo>,
-    player_characters: Vec<PlayerCharacterInfo>,
-    objectives: Vec<ObjectiveInfo>,
-}
-
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
-struct RoomInfo {
-    room_number: usize,
-    name: String,
-    description: String,
-    monsters: Vec<String>,
-    items: Vec<String>,
-    is_start_room: bool,
-    is_end_room: bool,
-}
-
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
-struct RoomConnectionInfo {
-    connected_room_numbers: Vec<usize>,
-    connection_type: String,
-    description: String,
-}
-
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
-struct MonsterInfo {
-    name: String,
-    description: String,
-    abilities: Vec<String>,
-    items: Vec<String>,
-    health: u32,
-    strength: u32,
-    dexterity: u32,
-    constitution: u32,
-    intelligence: u32,
-    wisdom: u32,
-}
-
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
-struct PlayerCharacterInfo {
-    matrix_display_name: String,
-    character_class: String,
-    abilities: Vec<String>,
-    items: Vec<String>,
-    health: u32,
-    strength: u32,
-    dexterity: u32,
-    constitution: u32,
-    intelligence: u32,
-    wisdom: u32,
-}
-
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone)]
-struct ObjectiveInfo {
-    goal: String,
-    items: Vec<String>,
-    monsters: Vec<String>,
-}
-
-// todo: move to a util class
-pub fn extract_json_from_response(hay: &str) -> Vec<&str> {
-    // todo: this could be improved, it doesnt match the ending ``` string properly
-    let re = Regex::new(r"```json([\s\S]+)```").unwrap(); // ``json([^(````)]+)```
-
-    let results: Vec<&str> = re.captures_iter(hay).map(|caps| {
-        let (_, [json]) = caps.extract();
-        json.trim()
-    }).collect();
-
-    results
-}
 
 
 

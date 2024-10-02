@@ -1,0 +1,121 @@
+I am a dungeon master. A player has asked me to take an action.
+I need to take the current state of the game and update it to reflect the players action.
+
+The current state of the game is:
+```json
+{
+  "rooms": [
+    {
+      "room_number": 1,
+      "name": "Entrance Hall",
+      "description": "A grand hall with a high ceiling and a mosaic floor depicting a fierce dragon. Dust covers the ancient tapestries on the walls.",
+      "monsters": [],
+      "items": ["Dusty Tapestry", "Small Key"],
+      "is_start_room": true,
+      "is_end_room": false
+    },
+    {
+      "room_number": 2,
+      "name": "Armory",
+      "description": "Rows of rusted weapons line the walls, and shattered suits of armor stand like empty guardians. A heavy chest sits in the corner.",
+      "monsters": ["Skeleton Warrior"],
+      "items": ["Rusted Sword", "Healing Potion"],
+      "is_start_room": false,
+      "is_end_room": false
+    },
+    {
+      "room_number": 3,
+      "name": "Throne Room",
+      "description": "A majestic throne of carved obsidian stands on a dais at the far end of the room. A shimmering portal shimmers behind it.",
+      "monsters": ["Goblin King"],
+      "items": ["Goblin King's Crown"],
+      "is_start_room": false,
+      "is_end_room": true
+    }
+  ],
+  "room_connections": [
+    {
+      "connected_room_numbers": [1, 2],
+      "connection_type": "Door",
+      "description": "A heavy wooden door, slightly ajar."
+    },
+    {
+      "connected_room_numbers": [2, 3],
+      "connection_type": "Secret Passage",
+      "description": "A narrow passage hidden behind a tapestry."
+    }
+  ],
+  "monsters": [
+    {
+      "name": "Skeleton Warrior",
+      "description": "An animated skeleton clad in rusty armor.",
+      "abilities": ["Undead Fortitude"],
+      "health": 25,
+      "strength": 14,
+      "dexterity": 10,
+      "constitution": 15,
+      "intelligence": 6,
+      "wisdom": 8,
+      "items": ["Rusted Axe"]
+    },
+    {
+      "name": "Goblin King",
+      "description": "A larger, more menacing goblin with a crude crown.",
+      "abilities": ["Command Goblins"],
+      "health": 35,
+      "strength": 12,
+      "dexterity": 14,
+      "constitution": 12,
+      "intelligence": 10,
+      "wisdom": 9,
+      "items": ["Goblin King's Scepter"]
+    }
+  ],
+  "player_characters": [
+    {
+      "matrix_display_name": "Brons",
+      "character_class": "Warrior",
+      "abilities": ["Power Attack"],
+      "items": ["Longsword", "Shield"],
+      "health": 40,
+      "strength": 16,
+      "dexterity": 12,
+      "constitution": 14,
+      "intelligence": 10,
+      "wisdom": 8
+    },
+    {
+      "matrix_display_name": "Fabian",
+      "character_class": "Rogue",
+      "abilities": ["Sneak Attack"],
+      "items": ["Daggers", "Lockpicks"],
+      "health": 35,
+      "strength": 10,
+      "dexterity": 18,
+      "constitution": 12,
+      "intelligence": 14,
+      "wisdom": 10
+    }
+  ],
+  "objectives": [
+    {
+      "goal": "Find the Goblin King's Crown",
+      "items": ["Goblin King's Crown"],
+      "monsters": []
+    },
+    {
+      "goal": "Escape through the portal",
+      "items": [],
+      "monsters": []
+    }
+  ]
+}
+
+```
+
+The player has asked me to:
+Fabian attack Brons
+
+I need the response in JSON format.
+
+Give me a diff I can apply to the game state.

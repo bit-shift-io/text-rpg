@@ -10,13 +10,12 @@ use matrix_sdk::{
     Room as MatrixRoom, RoomMemberships,
 };
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
+use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{commands::start_a_new_game::extract_json_from_response, components::{game_info_container::GameInfoContainer, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat};
+use crate::{components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::extract_json_from_response::extract_json_from_response};
 use crate::globals::*;
 use crate::components::room::Room;
-
-use super::start_a_new_game::GameInfo;
 
 const GAME_UPDATE_RAW_PROMPT: &str = r#"
 I am a dungeon master. A player has asked me to make an action.
@@ -31,7 +30,7 @@ ${action}
 Please respond with the updated state of the game.
 The format must be the same as the current game state.
 I need the response in JSON format.
-Do not prompt for futher instructions, if you are unsure make your best guess.
+Do not prompt for further instructions, if you are unsure make your best guess.
 "#;
 
 pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
@@ -44,7 +43,7 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
         .replace("act", "")
         .replace("verbose", "");
 
-    let mut json = "".to_owned();
+    let old_game_info = 
     {
         // get the GameInfoContainer component from the world
         let world_guard = GLOBAL_WORLD.lock().unwrap(); // Error cause by this line.
@@ -59,14 +58,11 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
 
         let (commands, mut game_info_container_query) = state.get_mut(&mut world);
         let mut game_info_container = game_info_container_query.single_mut();
-                
-        json = serde_json::to_string(&game_info_container.game_info).unwrap();
-    }
-
-    info!("GAME_INFO: {}", json);
-    if verbose {
-        room.send(RoomMessageEventContent::notice_plain(json.clone())).await.unwrap();
-    }
+         
+        game_info_container.game_info.clone()
+    };
+       
+    let json = serde_json::to_string_pretty(&old_game_info).unwrap();
 
     let game_update_prompt = GAME_UPDATE_RAW_PROMPT
         .replace("${game_state}", &json)
@@ -79,9 +75,26 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
             return Ok(());
         }
 
-        if verbose {
-            room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
-        }
+        info!(
+            "GAME_INFO JSON: {}",
+            json_strs[0].replace('\n', " ")
+        );
+
+        let value = match serde_json::from_str::<GameInfo>(&json_strs[0]) { 
+            Ok(game_info) => {
+                let json_diff = serde_json::to_string(&Diff::serializable(&old_game_info, &game_info)).unwrap();
+                info!("GAME_INFO DIFF: {}", json_diff.replace('\n', " "));
+
+                if verbose {
+                    room.send(RoomMessageEventContent::notice_plain(json_diff)).await.unwrap();
+                }
+            },
+            Err(err) => {
+                error!("Error parsing json: {err}");
+                room.send(RoomMessageEventContent::notice_plain("Failed to parse the map info.")).await.unwrap();
+            }
+        };
+
 
         // todo: update the game state
 

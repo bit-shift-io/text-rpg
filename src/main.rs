@@ -19,8 +19,11 @@ use serde::Deserialize;
 use tracing::{error, info};
 use lazy_static::lazy_static;
 
-mod aichat;
-use aichat::AiChat;
+
+mod lib {
+    pub mod aichat;
+    pub mod extract_json_from_response;
+}
 
 mod globals;
 use globals::*;
