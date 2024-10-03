@@ -26,7 +26,7 @@ The current state of the game is:
 ${game_state}
 ```
 
-The player has asked me to:
+The player with "matrix_display_name" is called "${matrix_display_name}" and has asked me to:
 ${action}
 
 Please respond with the updated state of the game.
@@ -49,7 +49,7 @@ The new state of the game after the players action is:
 ${new_game_state}
 ```
 
-The player has asked me to:
+The player with "matrix_display_name" is called "${matrix_display_name}" and has asked me to:
 ${action}
 
 Please include in your response exact values for things such as damage.
@@ -59,6 +59,10 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
     room.send(RoomMessageEventContent::notice_plain("Please wait...")).await.unwrap();
 
     let verbose = text.contains("verbose");
+
+    let joined_members = room.members(RoomMemberships::JOIN).await.unwrap();
+    let member_idx = joined_members.iter().position(|player_member| player_member.user_id() == sender).unwrap();
+    let acting_player_member = &joined_members[member_idx];
 
     let action_prompt = text
         .replace("DM", "")
@@ -88,7 +92,8 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
 
     let game_update_prompt = GAME_UPDATE_RAW_PROMPT
         .replace("${game_state}", &json)
-        .replace("${action}", &action_prompt);
+        .replace("${action}", &action_prompt)
+        .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
 
     if let Ok(result) = get_ai_chat().execute(&None, game_update_prompt.to_string(), Vec::new()) {
         let json_strs = extract_json_from_response(&result);
@@ -135,7 +140,8 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
                 let act_story_prompt = ACT_STORY_RAW_PROMPT
                     .replace("${previous_game_state}", &json)
                     .replace("${new_game_state}", &json_strs[0])
-                    .replace("${action}", &action_prompt);
+                    .replace("${action}", &action_prompt)
+                    .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
 
                 if let Ok(result) = get_ai_chat().execute(&None, act_story_prompt.to_string(), Vec::new()) {
                     info!( "ACT_STORY: {}", result);
