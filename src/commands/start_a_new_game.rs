@@ -32,8 +32,8 @@ I need a list of each room.
     "description": {The description of the room},
     "monsters": [A comma separated list of monsters in the room],
     "items": [A comma separated list of items in the room],
-    "is_start_room": {Is the room the room to start the game in?},
-    "is_end_room": {Is the room the room to end the game in?},
+    "is_start_room": {Is the room the room to start the game in},
+    "is_end_room": {Is the room the room to end the game in},
 }
 
 I need a list of room connections. This describes which rooms connect to other rooms.
@@ -71,6 +71,7 @@ There are ${num_players} players. The names of the players are: ${player_names}.
     "character_class": {The character class},
     "abilities": [A comma separated list of special abilties the character has],
     "items": [A comma separated list of items the character has],
+    "room_number": {The room number, must be the same as the room that has "is_start_room" set to true},
     "health: {The start health of the character},
     "strength": {The start strength of the character},
     "dexterity": {The start dexterity of the character},
@@ -281,7 +282,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                 }
 
                 room.typing_notice(true).await.unwrap();
-                
+
                 if let Ok(result) = get_ai_chat().execute(&None, start_story_prompt.to_string(), Vec::new()) {
                     info!( "START_STORY: {}", result);
                     room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();

@@ -57,6 +57,7 @@ pub struct PlayerCharacterInfo {
     pub character_class: String,
     pub abilities: Vec<String>,
     pub items: Vec<String>,
+    pub room_number: usize,
     pub health: u32,
     pub strength: u32,
     pub dexterity: u32,

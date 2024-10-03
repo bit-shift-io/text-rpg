@@ -53,6 +53,9 @@ The player with "matrix_display_name" is called "${matrix_display_name}" and has
 ${action}
 
 Please include in your response exact values for things such as damage.
+
+If the user is looking around, investigating or examining the room or area, ensure you include descriptions of all the "room_connections" for the room the player is located in.
+If the player moves to another room, ensure you describe the new room and any monsters it contains.
 "#;
 
 pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
