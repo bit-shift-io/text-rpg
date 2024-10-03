@@ -109,7 +109,9 @@ It has the following monsters: ${room_monsters}.
 "#;
 
 pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
-    room.send(RoomMessageEventContent::notice_plain("Let me go grab the game and set it up...")).await.unwrap();
+    room.typing_notice(true).await.unwrap();
+    
+    //room.send(RoomMessageEventContent::notice_plain("Let me go grab the game and set it up...")).await.unwrap();
 
     let verbose = text.contains("verbose");
 
@@ -126,6 +128,8 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
     let num_players = player_members.len();
     let player_names_str = player_members.clone().into_iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect::<Vec<String>>().join(", ");
     
+    room.typing_notice(true).await.unwrap();
+
     let game_info_prompt = GAME_INFO_RAW_PROMPT
         .replace("${num_players}", &num_players.to_string())
         .replace("${player_names}", &player_names_str.to_string())
@@ -136,7 +140,11 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
         room.send(RoomMessageEventContent::notice_plain(game_info_prompt.clone())).await.unwrap();
     }
 
+    room.typing_notice(true).await.unwrap();
+
     if let Ok(result) = get_ai_chat().execute(&None, game_info_prompt.to_string(), Vec::new()) {
+        room.typing_notice(true).await.unwrap();
+
         let json_strs = extract_json_from_response(&result);
         if json_strs.len() == 0 {
             room.send(RoomMessageEventContent::notice_plain("Failed to get JSON from response.")).await.unwrap();
@@ -150,6 +158,8 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
 
         let value = match serde_json::from_str::<GameInfo>(&json_strs[0]) { 
             Ok(game_info) => {
+                room.typing_notice(true).await.unwrap();
+
                 // this is just for debugging
                 if verbose {
                     room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
@@ -244,6 +254,8 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                     }
                 }
     
+                room.typing_notice(true).await.unwrap();
+
                 // build the start game prompt
                 let start_room_idx = game_info.rooms.iter().position(|room_info| room_info.is_start_room == true).unwrap();
                 let start_room_info = &game_info.rooms[start_room_idx];
@@ -261,11 +273,15 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
                     .replace("${room_description}", &start_room_info.description)
                     .replace("${room_monsters}", &room_monsters);
 
+                room.typing_notice(true).await.unwrap();
+
                 info!( "START_STORY_PROMPT: {}", start_story_prompt);
                 if verbose {
                     room.send(RoomMessageEventContent::notice_plain(start_story_prompt.clone())).await.unwrap();
                 }
 
+                room.typing_notice(true).await.unwrap();
+                
                 if let Ok(result) = get_ai_chat().execute(&None, start_story_prompt.to_string(), Vec::new()) {
                     info!( "START_STORY: {}", result);
                     room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
@@ -282,6 +298,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
         room.send(RoomMessageEventContent::notice_plain("Failed to prompt aichat.")).await.unwrap();
     }
 
+    room.typing_notice(false).await.unwrap();
     Ok(())
 }
 

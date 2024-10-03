@@ -56,13 +56,16 @@ Please include in your response exact values for things such as damage.
 "#;
 
 pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
-    room.send(RoomMessageEventContent::notice_plain("Please wait...")).await.unwrap();
+    room.typing_notice(true).await.unwrap();
+    //room.send(RoomMessageEventContent::notice_plain("Please wait...")).await.unwrap();
 
     let verbose = text.contains("verbose");
 
     let joined_members = room.members(RoomMemberships::JOIN).await.unwrap();
     let member_idx = joined_members.iter().position(|player_member| player_member.user_id() == sender).unwrap();
     let acting_player_member = &joined_members[member_idx];
+
+    room.typing_notice(true).await.unwrap();
 
     let action_prompt = text
         .replace("DM", "")
@@ -90,12 +93,16 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
        
     let json = serde_json::to_string_pretty(&old_game_info).unwrap();
 
+    room.typing_notice(true).await.unwrap();
+
     let game_update_prompt = GAME_UPDATE_RAW_PROMPT
         .replace("${game_state}", &json)
         .replace("${action}", &action_prompt)
         .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
 
     if let Ok(result) = get_ai_chat().execute(&None, game_update_prompt.to_string(), Vec::new()) {
+        room.typing_notice(true).await.unwrap();
+
         let json_strs = extract_json_from_response(&result);
         if json_strs.len() == 0 {
             room.send(RoomMessageEventContent::notice_plain("Failed to get JSON from response.")).await.unwrap();
@@ -143,6 +150,8 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
                     .replace("${action}", &action_prompt)
                     .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
 
+                room.typing_notice(true).await.unwrap();
+
                 if let Ok(result) = get_ai_chat().execute(&None, act_story_prompt.to_string(), Vec::new()) {
                     info!( "ACT_STORY: {}", result);
                     room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
@@ -157,5 +166,6 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
         };
     }
     
+    room.typing_notice(false).await.unwrap();
     Ok(())
 }
