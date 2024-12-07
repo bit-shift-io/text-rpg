@@ -117,5 +117,6 @@ The player has asked me to:
 Fabian attack Brons
 
 I need the response in JSON format.
+Do not include comments within the JSON structure.
 
 Give me a diff I can apply to the game state.

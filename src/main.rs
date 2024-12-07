@@ -34,6 +34,7 @@ mod commands {
     pub mod start_a_new_game;
     pub mod dump_world;
     pub mod act;
+    pub mod monster_act;
 }
 
 mod components {

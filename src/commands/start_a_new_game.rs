@@ -21,7 +21,8 @@ use crate::components::room::Room;
 const GAME_INFO_RAW_PROMPT: &str = r#"
 I am a dungeon master. I need to create a setup for the game.
 
-I need the response in JSON format. 
+I need the response in JSON format.
+Do not include comments within the JSON structure.
 
 I need a list of each room.
 
