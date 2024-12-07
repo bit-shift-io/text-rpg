@@ -1445,6 +1445,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "json-strip-comments"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b271732a960335e715b6b2ae66a086f115c74eb97360e996d2bd809bfc063bba"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "konst"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2901,6 +2910,7 @@ dependencies = [
  "bevy_ecs",
  "bevy_reflect",
  "headjack",
+ "json-strip-comments",
  "matrix-sdk",
  "regex",
  "serde",

@@ -93,7 +93,7 @@ pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, pr
         );
 
         if verbose {
-            room.send(RoomMessageEventContent::notice_plain(json_strs[0])).await.unwrap();
+            room.send(RoomMessageEventContent::notice_plain(json_strs[0].clone())).await.unwrap();
         }
 
         if json_strs.len() == 0 {

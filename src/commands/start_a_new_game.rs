@@ -317,13 +317,18 @@ mod tests {
         let text = r#"
             blah blah 
             ```json
-            {} 
+            {
+                // what about some code comments?
+            } 
             ```
             some other text
         "#;
         let results = extract_json_from_response(text);
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0], "{}");
+
+        let stripped_str = results[0].replace("\n", " ");
+        println!("{}", stripped_str);
+        assert_eq!(stripped_str, "{}");
     }
 
 
@@ -332,6 +337,7 @@ mod tests {
         let text = r#"{
             "rooms": [
                 {
+                "is_start_room": true,
                 "room_number": 1,
                 "name": "Entrance Hall",
                 "description": "A grand hall with a high vaulted ceiling. Dust covers the mosaic tiles on the floor and cobwebs cling to the corners. Two large, rusted iron doors stand at the far end of the hall.",
@@ -345,6 +351,7 @@ mod tests {
                 ]
                 },
                 {
+                "is_start_room": false,
                 "room_number": 2,
                 "name": "The Armory",
                 "description": "Weapons of all kinds line the walls, though most are rusted and dull with age. Broken arrows litter the floor, remnants of a past battle.",
@@ -356,6 +363,7 @@ mod tests {
                 ]
                 },
                 {
+                "is_start_room": false,
                 "room_number": 3,
                 "name": "The Throne Room",
                 "description": "A massive throne of bone sits atop a dais at the far end of the room. A single flickering torch casts eerie shadows on the walls.",
