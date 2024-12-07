@@ -168,7 +168,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
             
                 {
                     // https://github.com/bevyengine/bevy/discussions/15486
-                    let mut world = GLOBAL_WORLD.lock().unwrap();
+                    let mut world = GLOBAL_WORLD_2.lock().unwrap();
 
                     // store the whole game info struct
                     world.spawn(GameInfoContainer {

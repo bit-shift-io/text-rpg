@@ -17,7 +17,7 @@ use matrix_sdk::{
 };
 use serde::Deserialize;
 use tracing::{error, info};
-use lazy_static::lazy_static;
+//use lazy_static::lazy_static;
 
 
 mod lib {
@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
 
     let file_contents = fs::read_to_string("config.yml").expect("Unable to read config.yml");
     let config: Config = serde_yml::from_str(&file_contents).unwrap();
-    *GLOBAL_CONFIG.lock().unwrap() = Some(config.clone());
+    *GLOBAL_CONFIG_2.lock().unwrap() = Some(config.clone());
 
     info!("config: {}", config);
 

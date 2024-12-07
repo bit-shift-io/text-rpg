@@ -78,7 +78,7 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
     let old_game_info = 
     {
         // get the GameInfoContainer component from the world
-        let world_guard = GLOBAL_WORLD.lock().unwrap(); // Error cause by this line.
+        let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
         let mut world = world_guard;
 
         // https://doc.qu1x.dev/bevy_trackball/bevy/ecs/system/struct.SystemState.html
@@ -130,7 +130,7 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
                 // update the game state
                 {
                      // get the GameInfoContainer component from the world
-                    let world_guard = GLOBAL_WORLD.lock().unwrap(); // Error cause by this line.
+                    let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
                     let mut world = world_guard;
 
                     // https://doc.qu1x.dev/bevy_trackball/bevy/ecs/system/struct.SystemState.html

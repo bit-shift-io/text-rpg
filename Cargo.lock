@@ -2901,7 +2901,6 @@ dependencies = [
  "bevy_ecs",
  "bevy_reflect",
  "headjack",
- "lazy_static",
  "matrix-sdk",
  "regex",
  "serde",
