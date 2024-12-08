@@ -22,6 +22,7 @@ use tracing::{error, info};
 
 mod lib {
     pub mod aichat;
+    pub mod command_assistant;
     pub mod extract_json_from_response;
 }
 
