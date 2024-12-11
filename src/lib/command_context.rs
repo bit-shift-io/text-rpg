@@ -9,7 +9,7 @@ use matrix_sdk::{
     },
     Room as MatrixRoom, RoomMemberships,
 };
-use serde::{de::IntoDeserializer, Deserialize, Serialize};
+use serde::{de::{DeserializeOwned, IntoDeserializer}, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
@@ -17,14 +17,14 @@ use crate::{commands::monster_act::monster_act, components::{game_info_container
 use crate::globals::*;
 use crate::components::room::Room;
 
-pub struct CommandAssistant {
+pub struct CommandContext {
     pub sender: OwnedUserId,
     pub text: String,
     pub room: MatrixRoom,
     pub verbose: bool,
 }
 
-impl CommandAssistant {
+impl CommandContext {
     pub fn new(sender: OwnedUserId, text: String, room: MatrixRoom) -> Self {
         let verbose = text.contains("verbose");
         Self {
@@ -39,7 +39,13 @@ impl CommandAssistant {
         self.room.typing_notice(true).await.unwrap();
     }
 
-    pub async fn execute_story_prompt(&self, prompt: String) -> Result<String, String> {
+    pub async fn all_player_room_members(&self) -> Vec<RoomMember> {
+        let joined_members = self.room.members(RoomMemberships::JOIN).await.unwrap();
+        let player_members: Vec<RoomMember> = joined_members.into_iter().filter(|member| !member.is_account_user()).collect();
+        player_members
+    }
+
+    pub async fn execute_story_prompt(&self, prompt: String) -> Result<String, ()> {
         self.notify_typing().await;
 
         let r = get_ai_chat().execute(&None, prompt, Vec::new());
@@ -59,12 +65,13 @@ impl CommandAssistant {
                     self.room.send(RoomMessageEventContent::notice_plain("[execute_story_prompt] Failed to execute prompt.")).await.unwrap();
                 }
 
-                Err("Failed to execute AI chat.".to_string())
+                //Err("Failed to execute AI chat.".to_string())
+                Err(())
             }
         }
     }
 
-    pub async fn execute_json_prompt<'a, T: Deserialize<'a>>(&self, prompt: String) -> Result<T, Error> {
+    pub async fn execute_json_prompt<T: DeserializeOwned + Clone>(&self, prompt: String) -> Result<T, ()> {
         self.notify_typing().await;
 
         let r = get_ai_chat().execute(&None, prompt, Vec::new());
@@ -84,7 +91,18 @@ impl CommandAssistant {
                 }
 
                 let owned_string = json_strs[0].to_string(); // Create an owned copy
-                let r= serde_json::from_str::<T>(&owned_string);
+                let r = match serde_json::from_str::<T>(&owned_string) {
+                    Ok(obj) => {
+                        let c = obj.clone();
+                        Ok(c)
+                    },
+                    Err(err) => {
+                        error!("Error parsing json: {err}");
+                        self.room.send(RoomMessageEventContent::notice_plain("[execute_json_prompt] Failed to parse the map info.")).await.unwrap();
+                        //Err("Failed to execute AI chat.".to_string())
+                        Err(())
+                    }
+                };
                 r
 
                 /* 
@@ -117,7 +135,8 @@ impl CommandAssistant {
                     self.room.send(RoomMessageEventContent::notice_plain("[execute_story_prompt] Failed to execute prompt.")).await.unwrap();
                 }
 
-                Err("Failed to execute AI chat.".to_string())
+                //Err("Failed to execute AI chat.".to_string())
+                Err(())
             }
         }
     }

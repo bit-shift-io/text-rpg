@@ -12,7 +12,7 @@ use matrix_sdk::{
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::extract_json_from_response::extract_json_from_response};
+use crate::{components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
 use crate::globals::*;
 use crate::components::room::Room;
 
@@ -111,196 +111,139 @@ It has the following monsters: ${room_monsters}.
 "#;
 
 pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
-    room.typing_notice(true).await.unwrap();
-    
-    //room.send(RoomMessageEventContent::notice_plain("Let me go grab the game and set it up...")).await.unwrap();
+    let context = CommandContext::new(sender, text, room);
+    context.notify_typing().await;
 
-    let verbose = text.contains("verbose");
-
-    // any text left over should be feed to the gmae info prompt to let the user modify the game
-    // for example, they might want to assign certain character classes to certain players or setup a theme for the 
-    // game
-    let extra_user_prompt = text
-        .replace("DM", "")
-        .replace("start", "")
-        .replace("verbose", "");
-
-    let joined_members = room.members(RoomMemberships::JOIN).await.unwrap();
-    let player_members: Vec<RoomMember> = joined_members.into_iter().filter(|member| !member.is_account_user()).collect(); // todo: remove self
+    let player_members = context.all_player_room_members().await;
     let num_players = player_members.len();
     let player_names_str = player_members.clone().into_iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect::<Vec<String>>().join(", ");
     
-    room.typing_notice(true).await.unwrap();
+    // any text left over should be feed to the gmae info prompt to let the user modify the game
+    // for example, they might want to assign certain character classes to certain players or setup a theme for the 
+    // game
+    let extra_user_prompt = context.text
+        .replace("DM", "")
+        .replace("start", "")
+        .replace("verbose", "");
 
     let game_info_prompt = GAME_INFO_RAW_PROMPT
         .replace("${num_players}", &num_players.to_string())
         .replace("${player_names}", &player_names_str.to_string())
         .replace("${extra_user_prompt}", &extra_user_prompt.to_string());
 
-    info!( "GAME_INFO_PROMPT: {}", game_info_prompt);
-    if verbose {
-        room.send(RoomMessageEventContent::notice_plain(game_info_prompt.clone())).await.unwrap();
-    }
+    let game_info = context.execute_json_prompt::<GameInfo>(game_info_prompt).await?;
 
-    room.typing_notice(true).await.unwrap();
+    {
+        // https://github.com/bevyengine/bevy/discussions/15486
+        let mut world = GLOBAL_WORLD_2.lock().unwrap();
 
-    if let Ok(result) = get_ai_chat().execute(&None, game_info_prompt.to_string(), Vec::new()) {
-        room.typing_notice(true).await.unwrap();
+        // The NEW easy way:
+        // store the whole game info struct
+        world.spawn(GameInfoContainer {
+            game_info: game_info.clone(),
+        });
 
-        let json_strs = extract_json_from_response(&result);
-        if json_strs.len() == 0 {
-            room.send(RoomMessageEventContent::notice_plain("Failed to get JSON from response.")).await.unwrap();
-            return Ok(());
-        }
-        
-        info!(
-            "GAME_INFO JSON: {}",
-            json_strs[0].replace('\n', " ")
-        );
+        // The OLD way I was trying to setup to use bevy ECS:
+        /*
+        let mut start_room_number = 0;
 
-        let value = match serde_json::from_str::<GameInfo>(&json_strs[0]) { 
-            Ok(game_info) => {
-                room.typing_notice(true).await.unwrap();
+        // create rooms
+        for room_info in &game_info.rooms {
+            if room_info.is_start_room {
+                start_room_number = room_info.room_number;
+            }
 
-                // this is just for debugging
-                if verbose {
-                    room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
-                }
-            
-                {
-                    // https://github.com/bevyengine/bevy/discussions/15486
-                    let mut world = GLOBAL_WORLD_2.lock().unwrap();
+            world.spawn(Room {
+                room_number: room_info.room_number,
+                name: room_info.name.clone(),
+                description: room_info.description.clone(),
+            });
 
-                    // store the whole game info struct
-                    world.spawn(GameInfoContainer {
-                        game_info: game_info.clone(),
-                    });
+            // create items in the room
+            for item in &room_info.items {
+                world.spawn((
+                    Item {
+                        name: item.clone(),
+                    },
+                    RoomLocation {
+                        room_number: room_info.room_number,
+                    },
+                ));
+            }
 
-                    let mut start_room_number = 0;
-
-                    // create rooms
-                    for room_info in &game_info.rooms {
-                        if room_info.is_start_room {
-                            start_room_number = room_info.room_number;
-                        }
-
-                        world.spawn(Room {
-                            room_number: room_info.room_number,
-                            name: room_info.name.clone(),
-                            description: room_info.description.clone(),
-                        });
-
-                        // create items in the room
-                        for item in &room_info.items {
-                            world.spawn((
-                                Item {
-                                    name: item.clone(),
-                                },
-                                RoomLocation {
-                                    room_number: room_info.room_number,
-                                },
-                            ));
-                        }
-
-                        // look up and spawn a monster for each one in this room
-                        for monster_name in &room_info.monsters {
-                            for monster_info in &game_info.monsters {
-                                if monster_info.name == *monster_name {
-                                    world.spawn((
-                                        Monster {
-                                            name: monster_info.name.clone(),
-                                            description: monster_info.description.clone()
-                                        },
-                                        RoomLocation {
-                                            room_number: room_info.room_number,
-                                        },
-                                        Inventory {
-                                            items: vec![], // todo:
-                                        }
-                                    ));
-                                }
-                            }
-                        }
-                    }
-
-                    // create room connections
-                    for room_connection_info in &game_info.room_connections {
-                        world.spawn(RoomConnection {
-                            connected_room_numbers: room_connection_info.connected_room_numbers.clone(),
-                            connection_type: room_connection_info.connection_type.clone(),
-                            description: room_connection_info.description.clone(),
-                        });
-                    }
-
-                    // create players
-                    for player_character_info in &game_info.player_characters {
-                        let member_idx = player_members.iter().position(|player_member| player_member.display_name().unwrap() == player_character_info.matrix_display_name).unwrap();
-                        let player_member = &player_members[member_idx];
-                        let matrix_username = player_member.user_id().as_str();
-
+            // look up and spawn a monster for each one in this room
+            for monster_name in &room_info.monsters {
+                for monster_info in &game_info.monsters {
+                    if monster_info.name == *monster_name {
                         world.spawn((
-                            PlayerCharacter {
-                                matrix_username: matrix_username.to_owned(),
-                                character_class: player_character_info.character_class.clone(),
+                            Monster {
+                                name: monster_info.name.clone(),
+                                description: monster_info.description.clone()
                             },
-                            Health {
-                                health: player_character_info.health,
+                            RoomLocation {
+                                room_number: room_info.room_number,
                             },
                             Inventory {
                                 items: vec![], // todo:
-                            },
-                            RoomLocation {
-                                room_number: start_room_number,
-                            },
+                            }
                         ));
                     }
                 }
-    
-                room.typing_notice(true).await.unwrap();
-
-                // build the start game prompt
-                let start_room_idx = game_info.rooms.iter().position(|room_info| room_info.is_start_room == true).unwrap();
-                let start_room_info = &game_info.rooms[start_room_idx];
-                let room_monsters = start_room_info.monsters.clone().into_iter().map(|monster| monster).collect::<Vec<String>>().join(", ");
-
-                // include the matrix_usernames in the players string so they get included in the story!
-                // zip the player_characters and player_members to make a nice string representation of the players.
-                let players = game_info.player_characters.into_iter().zip(player_members.into_iter()).map(|(player_character_info, player_member)| format!("A {} with the name of {}", player_character_info.character_class, player_member.display_name().unwrap())).collect::<Vec<String>>().join(". ");
-                
-                let objectives = game_info.objectives.into_iter().map(|objective| objective.goal).collect::<Vec<String>>().join(". ");
-                let start_story_prompt = START_STORY_RAW_PROMPT
-                    .replace("${objectives}", &objectives.to_string())
-                    .replace("${players}", &players.to_string())
-                    .replace("${room_name}", &start_room_info.name)
-                    .replace("${room_description}", &start_room_info.description)
-                    .replace("${room_monsters}", &room_monsters);
-
-                room.typing_notice(true).await.unwrap();
-
-                info!( "START_STORY_PROMPT: {}", start_story_prompt);
-                if verbose {
-                    room.send(RoomMessageEventContent::notice_plain(start_story_prompt.clone())).await.unwrap();
-                }
-
-                room.typing_notice(true).await.unwrap();
-
-                if let Ok(result) = get_ai_chat().execute(&None, start_story_prompt.to_string(), Vec::new()) {
-                    info!( "START_STORY: {}", result);
-                    room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
-                } else {
-                    room.send(RoomMessageEventContent::notice_plain("Okay, a new game is ready. Let's begin.")).await.unwrap();
-                }
-            },
-            Err(err) => {
-                error!("Error parsing json: {err}");
-                room.send(RoomMessageEventContent::notice_plain("Failed to parse the map info.")).await.unwrap();
             }
-        };
-    } else {
-        room.send(RoomMessageEventContent::notice_plain("Failed to prompt aichat.")).await.unwrap();
+        }
+
+        // create room connections
+        for room_connection_info in &game_info.room_connections {
+            world.spawn(RoomConnection {
+                connected_room_numbers: room_connection_info.connected_room_numbers.clone(),
+                connection_type: room_connection_info.connection_type.clone(),
+                description: room_connection_info.description.clone(),
+            });
+        }
+
+        // create players
+        for player_character_info in &game_info.player_characters {
+            let member_idx = player_members.iter().position(|player_member| player_member.display_name().unwrap() == player_character_info.matrix_display_name).unwrap();
+            let player_member = &player_members[member_idx];
+            let matrix_username = player_member.user_id().as_str();
+
+            world.spawn((
+                PlayerCharacter {
+                    matrix_username: matrix_username.to_owned(),
+                    character_class: player_character_info.character_class.clone(),
+                },
+                Health {
+                    health: player_character_info.health,
+                },
+                Inventory {
+                    items: vec![], // todo:
+                },
+                RoomLocation {
+                    room_number: start_room_number,
+                },
+            ));
+        }
+        */
     }
 
-    room.typing_notice(false).await.unwrap();
+    // build the start game prompt
+    let start_room_idx = game_info.rooms.iter().position(|room_info| room_info.is_start_room == true).unwrap();
+    let start_room_info = &game_info.rooms[start_room_idx];
+    let room_monsters = start_room_info.monsters.clone().into_iter().map(|monster| monster).collect::<Vec<String>>().join(", ");
+
+    // include the matrix_usernames in the players string so they get included in the story!
+    // zip the player_characters and player_members to make a nice string representation of the players.
+    let players = game_info.player_characters.into_iter().zip(player_members.into_iter()).map(|(player_character_info, player_member)| format!("A {} with the name of {}", player_character_info.character_class, player_member.display_name().unwrap())).collect::<Vec<String>>().join(". ");
+    
+    let objectives = game_info.objectives.into_iter().map(|objective| objective.goal).collect::<Vec<String>>().join(". ");
+    let start_story_prompt = START_STORY_RAW_PROMPT
+        .replace("${objectives}", &objectives.to_string())
+        .replace("${players}", &players.to_string())
+        .replace("${room_name}", &start_room_info.name)
+        .replace("${room_description}", &start_room_info.description)
+        .replace("${room_monsters}", &room_monsters);
+
+    context.execute_story_prompt(start_story_prompt).await?;
     Ok(())
 }
 
