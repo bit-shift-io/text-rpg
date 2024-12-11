@@ -13,7 +13,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::extract_json_from_response::extract_json_from_response};
+use crate::{components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
 use crate::globals::*;
 use crate::components::room::Room;
 
@@ -68,9 +68,8 @@ Please include in your response exact values for things such as damage.
 
 /// This is a private command. You can't call it directly. It is called from the act commend
 pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, previous_game_state: GameInfo, new_game_state: GameInfo, action_prompt: String, acting_player_member: &RoomMember) -> Result<(), ()> {
-    room.typing_notice(true).await.unwrap();
-
-    let verbose = text.contains("verbose");
+    let context = CommandContext::new(sender, text, room);
+    context.notify_typing().await;
 
     let previous_game_state_str = serde_json::to_string_pretty(&previous_game_state).unwrap();
     let new_game_state_str = serde_json::to_string_pretty(&new_game_state).unwrap();
@@ -81,79 +80,36 @@ pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, pr
         .replace("${action}", &action_prompt)
         .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
 
+    let game_info = context.execute_json_prompt::<GameInfo>(game_update_prompt).await?;
+    let new_game_state_str = serde_json::to_string_pretty(&game_info).unwrap();
 
-    if let Ok(result) = get_ai_chat().execute(&None, game_update_prompt.to_string(), Vec::new()) {
-        room.typing_notice(true).await.unwrap();
+    // update the game state
+    let game_info_clone = {
+        // get the GameInfoContainer component from the world
+        let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
+        let mut world = world_guard;
 
-        let json_strs = extract_json_from_response(&result);
+        // https://doc.qu1x.dev/bevy_trackball/bevy/ecs/system/struct.SystemState.html
+        // https://github.com/bevyengine/bevy/issues/2687
+        let mut state: SystemState<(
+            Commands,
+            Query<&mut GameInfoContainer>,
+        )> = SystemState::new(&mut world);
 
-        info!(
-            "GAME_INFO JSON: {}",
-            json_strs[0].replace('\n', " ")
-        );
+        let (commands, mut game_info_container_query) = state.get_mut(&mut world);
 
-        if verbose {
-            room.send(RoomMessageEventContent::notice_plain(json_strs[0].clone())).await.unwrap();
-        }
+        let mut game_info_container = game_info_container_query.single_mut();
+        game_info_container.game_info = game_info;
+        game_info_container.game_info.clone()
+    };
 
-        if json_strs.len() == 0 {
-            room.send(RoomMessageEventContent::notice_plain("Failed to get JSON from response.")).await.unwrap();
-            return Ok(());
-        }
+    // form a prompt to describe the monsters action as a story
+    let act_story_prompt = ACT_STORY_RAW_PROMPT
+        .replace("${previous_game_state}", &new_game_state_str)
+        .replace("${new_game_state}", &new_game_state_str)
+        .replace("${action}", &action_prompt)
+        .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
 
-        // todo: this keeps failing as the AI is injecting code comments into the JSON!
-        let value = match serde_json::from_str::<GameInfo>(&json_strs[0]) { 
-            Ok(game_info) => {
-                let json_diff = serde_json::to_string(&Diff::serializable(&new_game_state, &game_info)).unwrap();
-                info!("GAME_INFO DIFF: {}", json_diff.replace('\n', " "));
-
-                if verbose {
-                    room.send(RoomMessageEventContent::notice_plain(json_diff)).await.unwrap();
-                }
-
-                // update the game state
-                let game_info_clone = {
-                    // get the GameInfoContainer component from the world
-                   let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
-                   let mut world = world_guard;
-
-                   // https://doc.qu1x.dev/bevy_trackball/bevy/ecs/system/struct.SystemState.html
-                   // https://github.com/bevyengine/bevy/issues/2687
-                   let mut state: SystemState<(
-                       Commands,
-                       Query<&mut GameInfoContainer>,
-                   )> = SystemState::new(&mut world);
-
-                   let (commands, mut game_info_container_query) = state.get_mut(&mut world);
-
-                   let mut game_info_container = game_info_container_query.single_mut();
-                   game_info_container.game_info = game_info;
-                   game_info_container.game_info.clone()
-                };
-
-                // form a prompt to describe the monsters action as a story
-                let act_story_prompt = ACT_STORY_RAW_PROMPT
-                    .replace("${previous_game_state}", &new_game_state_str)
-                    .replace("${new_game_state}", &json_strs[0])
-                    .replace("${action}", &action_prompt)
-                    .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
-
-                room.typing_notice(true).await.unwrap();
-
-                if let Ok(result) = get_ai_chat().execute(&None, act_story_prompt.to_string(), Vec::new()) {
-                    info!( "ACT_STORY: {}", result);
-                    room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
-                } else {
-                    room.send(RoomMessageEventContent::notice_plain(action_prompt.clone())).await.unwrap();
-                }
-            },
-            Err(err) => {
-                error!("Error parsing json: {err}");
-                room.send(RoomMessageEventContent::notice_plain("Failed to parse the map info.")).await.unwrap();
-            }
-        };
-    }
-
-    room.typing_notice(false).await.unwrap();
+    context.execute_story_prompt(act_story_prompt).await?;
     Ok(())
 }
