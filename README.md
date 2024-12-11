@@ -9,7 +9,9 @@ Headjack - Rust Matrix wrapped - https://docs.rs/headjack/0.4.0/headjack/index.h
 
 # Docker
 
-To Build: ```docker build -t text-rpg .```
+To Build: ```docker build --progress=plain -t text-rpg .```
+
+Add ```--no-cache``` if you need to test modifying the docker image.
 
 ```docker images``` to list the available images.
 

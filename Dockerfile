@@ -1,7 +1,7 @@
 # https://dev.to/rogertorres/first-steps-with-docker-rust-30oi
 
-# Rust as the base image
-FROM rust AS build
+# Rust nightly as the base image
+FROM rustlang/rust:nightly AS build
 
 # Create a new empty shell project
 RUN USER=root cargo new --bin text-rpg
@@ -12,14 +12,13 @@ COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 
 # Build only the dependencies to cache them
-RUN cargo build --release
-RUN rm src/*.rs
+# NOTE: text-rpg becomes text_rpg for deps
+RUN cargo build --release && rm -rf src && rm -f ./target/release/deps/text_rpg* && rm -f ./target/release/text-rpg*
 
 # Copy the source code
 COPY ./src ./src
 
 # Build for release.
-RUN rm -f ./target/release/deps/text-rpg*
 RUN cargo build --release
 
 # The final base image
