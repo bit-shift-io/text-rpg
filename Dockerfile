@@ -24,6 +24,9 @@ RUN cargo build --release
 # The final base image
 FROM debian:bookworm-slim
 
+# Install some deps
+RUN apt-get update && apt-get -y install sqlite3 openssl
+
 # Copy from the previous build
 COPY --from=build /text-rpg/target/release/text-rpg /usr/src/text-rpg
 # COPY --from=build /text-rpg/target/release/text-rpg/target/x86_64-unknown-linux-musl/release/text-rpg .
