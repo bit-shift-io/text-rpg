@@ -13,7 +13,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{commands::monster_act::monster_act, components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::extract_json_from_response::extract_json_from_response};
+use crate::{commands::monster_act::monster_act, components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
 use crate::globals::*;
 use crate::components::room::Room;
 
@@ -70,18 +70,12 @@ fn is_alive_monster_in_same_room_as_sender(game_info: &GameInfo, acting_player_m
 }
 
 pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
-    room.typing_notice(true).await.unwrap();
-    //room.send(RoomMessageEventContent::notice_plain("Please wait...")).await.unwrap();
+    let context = CommandContext::new(sender, text, room);
+    context.notify_typing().await;
 
-    let verbose = text.contains("verbose");
-
-    let joined_members = room.members(RoomMemberships::JOIN).await.unwrap();
-    let member_idx = joined_members.iter().position(|player_member| player_member.user_id() == sender).unwrap();
-    let acting_player_member = &joined_members[member_idx];
-
-    room.typing_notice(true).await.unwrap();
-
-    let action_prompt = text
+    let acting_player_member = context.sender_room_member().await?;
+    
+    let action_prompt = context.text
         .replace("DM", "")
         .replace("act", "")
         .replace("verbose", "");
@@ -104,88 +98,52 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
          
         game_info_container.game_info.clone()
     };
-       
+
+
     let json = serde_json::to_string_pretty(&old_game_info).unwrap();
 
-    room.typing_notice(true).await.unwrap();
 
     let game_update_prompt = GAME_UPDATE_RAW_PROMPT
         .replace("${game_state}", &json)
         .replace("${action}", &action_prompt)
         .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
 
-    if let Ok(result) = get_ai_chat().execute(&None, game_update_prompt.to_string(), Vec::new()) {
-        room.typing_notice(true).await.unwrap();
+    let game_info = context.execute_json_prompt::<GameInfo>(game_update_prompt).await?;
+    let new_game_state_str = serde_json::to_string_pretty(&game_info).unwrap();
 
-        let json_strs = extract_json_from_response(&result);
-        if json_strs.len() == 0 {
-            room.send(RoomMessageEventContent::notice_plain("Failed to get JSON from response.")).await.unwrap();
-            return Ok(());
-        }
+    // update the game state
+    let game_info_clone = {
+        // get the GameInfoContainer component from the world
+        let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
+        let mut world = world_guard;
 
-        info!(
-            "GAME_INFO JSON: {}",
-            json_strs[0].replace('\n', " ")
-        );
+        // https://doc.qu1x.dev/bevy_trackball/bevy/ecs/system/struct.SystemState.html
+        // https://github.com/bevyengine/bevy/issues/2687
+        let mut state: SystemState<(
+            Commands,
+            Query<&mut GameInfoContainer>,
+        )> = SystemState::new(&mut world);
 
-        let value = match serde_json::from_str::<GameInfo>(&json_strs[0]) { 
-            Ok(game_info) => {
-                let json_diff = serde_json::to_string(&Diff::serializable(&old_game_info, &game_info)).unwrap();
-                info!("GAME_INFO DIFF: {}", json_diff.replace('\n', " "));
+        let (commands, mut game_info_container_query) = state.get_mut(&mut world);
 
-                if verbose {
-                    room.send(RoomMessageEventContent::notice_plain(json_diff)).await.unwrap();
-                }
+        let mut game_info_container = game_info_container_query.single_mut();
+        game_info_container.game_info = game_info;
+        game_info_container.game_info.clone()
+    };
 
+    // form a prompt to describe the users action as a story
+    let act_story_prompt = ACT_STORY_RAW_PROMPT
+        .replace("${previous_game_state}", &json)
+        .replace("${new_game_state}", &new_game_state_str)
+        .replace("${action}", &action_prompt)
+        .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
 
-                // update the game state
-                let game_info_clone = {
-                     // get the GameInfoContainer component from the world
-                    let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
-                    let mut world = world_guard;
+    context.execute_story_prompt(act_story_prompt).await?;
 
-                    // https://doc.qu1x.dev/bevy_trackball/bevy/ecs/system/struct.SystemState.html
-                    // https://github.com/bevyengine/bevy/issues/2687
-                    let mut state: SystemState<(
-                        Commands,
-                        Query<&mut GameInfoContainer>,
-                    )> = SystemState::new(&mut world);
-
-                    let (commands, mut game_info_container_query) = state.get_mut(&mut world);
-
-                    let mut game_info_container = game_info_container_query.single_mut();
-                    game_info_container.game_info = game_info;
-                    game_info_container.game_info.clone()
-                };
-
-                // form a prompt to describe the users action as a story
-                let act_story_prompt = ACT_STORY_RAW_PROMPT
-                    .replace("${previous_game_state}", &json)
-                    .replace("${new_game_state}", &json_strs[0])
-                    .replace("${action}", &action_prompt)
-                    .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
-
-                room.typing_notice(true).await.unwrap();
-
-                if let Ok(result) = get_ai_chat().execute(&None, act_story_prompt.to_string(), Vec::new()) {
-                    info!( "ACT_STORY: {}", result);
-                    room.send(RoomMessageEventContent::notice_plain(result)).await.unwrap();
-                } else {
-                    room.send(RoomMessageEventContent::notice_plain(action_prompt.clone())).await.unwrap();
-                }
-
-                let alive_monster_in_same_room_as_sender = is_alive_monster_in_same_room_as_sender(&game_info_clone, acting_player_member);
-                if alive_monster_in_same_room_as_sender {
-                    return monster_act(sender, text, room, old_game_info, game_info_clone, action_prompt, acting_player_member).await;
-                }
-            },
-            Err(err) => {
-                error!("Error parsing json: {err}");
-                room.send(RoomMessageEventContent::notice_plain("Failed to parse the map info.")).await.unwrap();
-            }
-        };
+    let alive_monster_in_same_room_as_sender = is_alive_monster_in_same_room_as_sender(&game_info_clone, &acting_player_member);
+    if alive_monster_in_same_room_as_sender {
+        return monster_act(context.sender, context.text, context.room, old_game_info, game_info_clone, action_prompt, &acting_player_member).await;
     }
-    
-    room.typing_notice(false).await.unwrap();
+
     Ok(())
 }

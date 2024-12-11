@@ -39,6 +39,19 @@ impl CommandContext {
         self.room.typing_notice(true).await.unwrap();
     }
 
+    pub async fn sender_room_member(&self) -> Result<RoomMember, ()> {
+        let joined_members = match self.room.members(RoomMemberships::JOIN).await {
+            Ok(members) => members,
+            Err(e) => {
+                error!("Error fetching joined members: {}", e);
+                return Err(());
+            }
+        };
+        let member_idx = joined_members.iter().position(|player_member| player_member.user_id() == self.sender).unwrap();
+        let acting_player_member = &joined_members[member_idx];
+        Ok(acting_player_member.clone())
+    }
+
     pub async fn all_player_room_members(&self) -> Vec<RoomMember> {
         let joined_members = self.room.members(RoomMemberships::JOIN).await.unwrap();
         let player_members: Vec<RoomMember> = joined_members.into_iter().filter(|member| !member.is_account_user()).collect();
