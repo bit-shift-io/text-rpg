@@ -69,6 +69,10 @@ Please include in your response exact values for things such as damage.
 /// This is a private command. You can't call it directly. It is called from the act commend
 pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, previous_game_state: GameInfo, new_game_state: GameInfo, action_prompt: String, acting_player_member: &RoomMember) -> Result<(), ()> {
     let context = CommandContext::new(sender, text, room);
+    if !context.handles_room() {
+        return Ok(());
+    }
+
     context.notify_typing().await;
 
     let previous_game_state_str = serde_json::to_string_pretty(&previous_game_state).unwrap();

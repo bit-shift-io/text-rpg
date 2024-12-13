@@ -35,6 +35,17 @@ impl CommandContext {
         }
     }
 
+    // Are we allowed to respond to this command?
+    pub fn handles_room(&self) -> bool {
+        let room_name = self.room.name().unwrap_or_default();
+        let config = GLOBAL_CONFIG_2.lock().unwrap().clone().unwrap();
+
+        match config.rooms {
+            Some(rooms) => rooms.iter().any(|room| *room == room_name),
+            None => true,
+        }
+    }
+
     pub async fn notify_typing(&self) {
         self.room.typing_notice(true).await.unwrap();
     }

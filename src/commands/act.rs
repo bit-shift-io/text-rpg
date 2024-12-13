@@ -71,6 +71,10 @@ fn is_alive_monster_in_same_room_as_sender(game_info: &GameInfo, acting_player_m
 
 pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
     let context = CommandContext::new(sender, text, room);
+    if !context.handles_room() {
+        return Ok(());
+    }
+
     context.notify_typing().await;
 
     let acting_player_member = context.sender_room_member().await?;

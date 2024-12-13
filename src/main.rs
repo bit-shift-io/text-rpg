@@ -6,6 +6,7 @@ use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
 
 use config::Config;
 use headjack::*;
+use lib::command_context::CommandContext;
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::MessagesOptions,
@@ -103,9 +104,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         "party",
         "".to_string(),
         "Party!".to_string(),
-        |_, _, room| async move {
+        |sender, text, room| async move {
+            let context = CommandContext::new(sender, text, room);
+            if !context.handles_room() {
+                return Ok(());
+            }
+
             let content = RoomMessageEventContent::notice_plain(".🎉🎊🥳 let's PARTY!! 🥳🎊🎉");
-            room.send(content).await.unwrap();
+            context.room.send(content).await.unwrap();
             Ok(())
         },
     )

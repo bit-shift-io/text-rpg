@@ -112,6 +112,10 @@ It has the following monsters: ${room_monsters}.
 
 pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
     let context = CommandContext::new(sender, text, room);
+    if !context.handles_room() {
+        return Ok(());
+    }
+
     context.notify_typing().await;
 
     let player_members = context.all_player_room_members().await;
