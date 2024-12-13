@@ -59,7 +59,14 @@ use commands::{act::act, dump_world::dump_world, start_a_new_game::start_a_new_g
 async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     tracing_subscriber::fmt::init();
 
-    let file_contents = fs::read_to_string("config.yml").expect("Unable to read config.yml");
+    // first try to read from the docker config location, else fallback to the local dev version
+    let file_contents = match fs::read_to_string("/data/config.yml") {
+        Ok(contents) => contents,
+        Err(e) => {
+            fs::read_to_string("config.yml").expect("Unable to read config.yml")
+        }
+    };
+
     let config: Config = serde_yml::from_str(&file_contents).unwrap();
     *GLOBAL_CONFIG_2.lock().unwrap() = Some(config.clone());
 

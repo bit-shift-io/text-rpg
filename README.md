@@ -21,12 +21,21 @@ Add ```--no-cache``` if you need to test modifying the docker image.
 
 ```docker images``` to list the available images.
 
-To run: ```docker run -p 8080:3030 --rm --name text-rpg1 text-rpg```
+To run: ```docker run -p 8080:8080 --rm --name text-rpg1 text-rpg```
 
 For more info refer to: https://dev.to/rogertorres/first-steps-with-docker-rust-30oi
 
 ## Run release build locally
 
+### Build and run release
+
 cargo build --release
 
 cargo run --release
+
+### Run docker compose
+
+Build the docker image first.
+
+Copy config.yml into ~/Docker/text-tpg
+docker-compose -f compose.yml up --build

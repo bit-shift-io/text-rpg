@@ -1,0 +1,14 @@
+# docker-compose -f compose.yml up --build
+
+services:
+  text-rpg:
+    image: text-rpg
+    container_name: text-rpg
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1001
+    #ports:
+    #  - 8080:8080
+    volumes:
+      - ${HOME}/Docker/text-tpg:/data
