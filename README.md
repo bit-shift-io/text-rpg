@@ -11,6 +11,8 @@ Headjack - Rust Matrix wrapped - https://docs.rs/headjack/0.4.0/headjack/index.h
 
 Copy config.example.yml and rename to config.yml. Set up the config.yml as required.
 
+If you have no rooms specified the bot will respond in ALL rooms.
+
 ## Docker
 
 To Build: ```docker build --progress=plain -t text-rpg .```
