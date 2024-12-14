@@ -9,5 +9,5 @@ services:
       - PUID=1000
       - PGID=1001
     volumes:
-      - ${HOME}/Docker/text-tpg:/data
+      - ${HOME}/Docker/text-rpg:/data
       - /etc/ssl:/etc/ssl
