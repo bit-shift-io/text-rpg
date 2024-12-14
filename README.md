@@ -9,11 +9,15 @@ Headjack - Rust Matrix wrapped - https://docs.rs/headjack/0.4.0/headjack/index.h
 
 ## Install
 
-Copy config.example.yml and rename to config.yml. Set up the config.yml as required.
+### Config
+
+Copy ```config.example.yml``` and rename to ```config.yml```. Set up the ```config.yml``` as required.
 
 If you have no rooms specified the bot will respond in ALL rooms.
 
 ## Docker
+
+## Image
 
 To Build: ```docker build --progress=plain -t text-rpg .```
 
@@ -21,21 +25,24 @@ Add ```--no-cache``` if you need to test modifying the docker image.
 
 ```docker images``` to list the available images.
 
-To run: ```docker run -p 8080:8080 --rm --name text-rpg1 text-rpg```
+To run: ```docker run -p 443:443 -v /etc/ssl:/etc/ssl:ro -v .:/data --rm --name text-rpg1 text-rpg```
 
 For more info refer to: https://dev.to/rogertorres/first-steps-with-docker-rust-30oi
 
-## Run release build locally
+### Compose
 
-### Build and run release
-
-cargo build --release
-
-cargo run --release
-
-### Run docker compose
+```compose.yml``` is provided to help setup the docker image and supply the appropriate files needed.
 
 Build the docker image first.
 
-Copy config.yml into ~/Docker/text-tpg
-docker-compose -f compose.yml up --build
+Copy ```config.yml``` into ```~/Docker/text-tpg```
+```docker-compose -f compose.yml up --build```
+
+
+## Local release builds
+
+### Build and run release
+
+```cargo build --release```
+
+```cargo run --release```
