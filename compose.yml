@@ -4,9 +4,10 @@ services:
   text-rpg:
     image: text-rpg
     container_name: text-rpg
-    restart: always
-    environment:
-      - PUID=1000
-      - PGID=1001
+    restart: unless-stopped
+    user: "1000:1000"
+    #environment:
+    #  - PUID=1000
+    #  - PGID=1001
     volumes:
       - ${HOME}/Docker/text-rpg:/data
