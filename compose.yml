@@ -8,8 +8,6 @@ services:
     environment:
       - PUID=1000
       - PGID=1001
-    #ports:
-    #  - 8080:8080
     volumes:
       - ${HOME}/Docker/text-tpg:/data
       - /etc/ssl:/etc/ssl
