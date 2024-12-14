@@ -75,8 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     let mut config: Config = serde_yml::from_str(&file_contents).unwrap();
     config.aichat_config_file = aichat_config_file;
     
-    *GLOBAL_CONFIG_2.lock().unwrap() = Some(config.clone());
-
+    *GLOBAL_CONFIG.lock().unwrap() = Some(config.clone());
     info!("config: {}", config);
 
 

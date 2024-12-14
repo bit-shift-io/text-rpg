@@ -1,3 +1,4 @@
+/*
 use bevy_ecs::prelude::*;
 use bevy_reflect::Reflect;
 
@@ -5,3 +6,4 @@ use bevy_reflect::Reflect;
 pub struct RoomLocation {
     pub room_number: usize,
 }
+*/

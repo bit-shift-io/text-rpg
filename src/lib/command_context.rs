@@ -1,5 +1,5 @@
-use bevy_ecs::{entity::Entity, system::{Commands, Query, SystemState}};
-use bevy_reflect::Reflect;
+//use bevy_ecs::{entity::Entity, system::{Commands, Query, SystemState}};
+//use bevy_reflect::Reflect;
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -13,9 +13,8 @@ use serde::{de::{DeserializeOwned, IntoDeserializer}, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{commands::monster_act::monster_act, components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::extract_json_from_response::extract_json_from_response};
+use crate::{commands::monster_act::monster_act, components::game_info_container::GameInfo, get_ai_chat, lib::extract_json_from_response::extract_json_from_response};
 use crate::globals::*;
-use crate::components::room::Room;
 
 pub struct CommandContext {
     pub sender: OwnedUserId,
@@ -38,7 +37,7 @@ impl CommandContext {
     // Are we allowed to respond to this command?
     pub fn handles_room(&self) -> bool {
         let room_name = self.room.name().unwrap_or_default();
-        let config = GLOBAL_CONFIG_2.lock().unwrap().clone().unwrap();
+        let config = GLOBAL_CONFIG.lock().unwrap().clone().unwrap();
 
         match config.rooms {
             Some(rooms) => rooms.iter().any(|room| *room == room_name),
@@ -69,6 +68,34 @@ impl CommandContext {
         player_members
     }
 
+    pub async fn room_send(&self, msg: &str) -> Result<String, ()> {
+        match self.room.send(RoomMessageEventContent::notice_plain(msg.clone())).await {
+            Ok(response) => Ok("".to_string()),
+            Err(e) => {
+                error!("Error sending message: {}", e);
+                Err(())
+            }
+        }
+    }
+
+    pub async fn clone_game_info(&self) -> Result<GameInfo, ()> {
+        // todo: https://stackoverflow.com/questions/68976937/rust-future-cannot-be-sent-between-threads-safely
+        // need to put something in the chat to say to start the game!
+
+        let mutex_guard = GLOBAL_GAME_INFO.lock().unwrap();
+        let game_info_option = mutex_guard.as_ref();
+
+        if game_info_option.is_none() {
+            error!("No game in progress. Please run \"DM start\".");
+            //self.room_send("No game in progress. Please run \"DM start\".").await?;
+        }
+
+        match game_info_option {
+            Some(game_info) => Ok(game_info.clone()),
+            None => Err(())
+        }
+    }
+
     pub async fn execute_story_prompt(&self, prompt: String) -> Result<String, ()> {
         self.notify_typing().await;
 
@@ -83,13 +110,8 @@ impl CommandContext {
                 Ok(result)
             },
             Err(e) => {
-                error!("Error executing AI chat: {}", e);
-
-                if self.verbose {
-                    self.room.send(RoomMessageEventContent::notice_plain("[execute_story_prompt] Failed to execute prompt.")).await.unwrap();
-                }
-
-                //Err("Failed to execute AI chat.".to_string())
+                error!("[execute_story_prompt] Failed to execute prompt: {}", e);
+                self.room.send(RoomMessageEventContent::notice_plain(format!("[execute_story_prompt] Failed to execute prompt: {}", e))).await.unwrap();
                 Err(())
             }
         }
@@ -128,38 +150,10 @@ impl CommandContext {
                     }
                 };
                 r
-
-                /* 
-                //let value = 
-                match serde_json::from_str::<T>(&owned_string) {
-                    Ok(obj) => {
-                        /* 
-                        let json_diff = serde_json::to_string(&Diff::serializable(&new_game_state, &game_info)).unwrap();
-                        info!("GAME_INFO DIFF: {}", json_diff.replace('\n', " "));
-        
-                        if self.verbose {
-                            self.room.send(RoomMessageEventContent::notice_plain(json_diff)).await.unwrap();
-                        }*/
-
-                        Ok(obj)
-                    },
-                    Err(err) => {
-                        error!("Error parsing json: {err}");
-                        self.room.send(RoomMessageEventContent::notice_plain("[execute_json_prompt] Failed to parse the map info.")).await.unwrap();
-                        Err("Failed to execute AI chat.".to_string())
-                    }
-                }*/
-
-                //Err("NO valid JSON response.".to_string())
             },
             Err(e) => {
-                error!("Error executing AI chat: {}", e);
-
-                if self.verbose {
-                    self.room.send(RoomMessageEventContent::notice_plain("[execute_story_prompt] Failed to execute prompt.")).await.unwrap();
-                }
-
-                //Err("Failed to execute AI chat.".to_string())
+                error!("[execute_json_prompt] Failed to execute prompt: {}", e);
+                self.room.send(RoomMessageEventContent::notice_plain(format!("[execute_json_prompt] Failed to execute prompt: {}", e))).await.unwrap();
                 Err(())
             }
         }

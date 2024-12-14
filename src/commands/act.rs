@@ -1,5 +1,5 @@
-use bevy_ecs::{entity::Entity, system::{Commands, Query, SystemState}};
-use bevy_reflect::Reflect;
+//use bevy_ecs::{entity::Entity, system::{Commands, Query, SystemState}};
+//use bevy_reflect::Reflect;
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -13,9 +13,10 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{commands::monster_act::monster_act, components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
+use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
 use crate::globals::*;
-use crate::components::room::Room;
+
+use super::monster_act::monster_act;
 
 const GAME_UPDATE_RAW_PROMPT: &str = r#"
 I am a dungeon master. A player has asked me to make an action.
@@ -83,8 +84,10 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
         .replace("DM", "")
         .replace("act", "")
         .replace("verbose", "");
-
-    let old_game_info = 
+  
+    let old_game_info = context.clone_game_info().await?;
+    
+    /*
     {
         // get the GameInfoContainer component from the world
         let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
@@ -101,11 +104,9 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
         let game_info_container = game_info_container_query.single_mut();
          
         game_info_container.game_info.clone()
-    };
-
+    };*/
 
     let json = serde_json::to_string_pretty(&old_game_info).unwrap();
-
 
     let game_update_prompt = GAME_UPDATE_RAW_PROMPT
         .replace("${game_state}", &json)
@@ -116,7 +117,7 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
     let new_game_state_str = serde_json::to_string_pretty(&game_info).unwrap();
 
     // update the game state
-    let game_info_clone = {
+    let game_info_clone = context.clone_game_info().await?; /*{
         // get the GameInfoContainer component from the world
         let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
         let mut world = world_guard;
@@ -133,7 +134,7 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
         let mut game_info_container = game_info_container_query.single_mut();
         game_info_container.game_info = game_info;
         game_info_container.game_info.clone()
-    };
+    };*/
 
     // form a prompt to describe the users action as a story
     let act_story_prompt = ACT_STORY_RAW_PROMPT

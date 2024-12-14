@@ -1,16 +1,18 @@
-use bevy_ecs::prelude::*;
-use bevy_reflect::Reflect;
+//use bevy_ecs::prelude::*;
+//use bevy_reflect::Reflect;
 use serde::{Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 
+/*
 #[derive(Component, Reflect, Debug)]
 pub struct GameInfoContainer {
     pub game_info: GameInfo,
 }
+*/
 
 
 
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone, SerdeDiff, PartialEq)]
+#[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct GameInfo {
     pub rooms: Vec<RoomInfo>,
     pub room_connections: Vec<RoomConnectionInfo>,
@@ -19,7 +21,7 @@ pub struct GameInfo {
     pub objectives: Vec<ObjectiveInfo>,
 }
 
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone, SerdeDiff, PartialEq)]
+#[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct RoomInfo {
     pub room_number: usize,
     pub name: String,
@@ -30,14 +32,14 @@ pub struct RoomInfo {
     pub is_end_room: bool,
 }
 
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone, SerdeDiff, PartialEq)]
+#[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct RoomConnectionInfo {
     pub connected_room_numbers: Vec<usize>,
     pub connection_type: String,
     pub description: String,
 }
 
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone, SerdeDiff, PartialEq)]
+#[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct MonsterInfo {
     pub name: String,
     pub description: String,
@@ -51,7 +53,7 @@ pub struct MonsterInfo {
     pub wisdom: u32,
 }
 
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone, SerdeDiff, PartialEq)]
+#[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct PlayerCharacterInfo {
     pub matrix_display_name: String,
     pub character_class: String,
@@ -66,7 +68,7 @@ pub struct PlayerCharacterInfo {
     pub wisdom: u32,
 }
 
-#[derive(Serialize, Deserialize, Reflect, Debug, Clone, SerdeDiff, PartialEq)]
+#[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct ObjectiveInfo {
     pub goal: String,
     pub items: Vec<String>,

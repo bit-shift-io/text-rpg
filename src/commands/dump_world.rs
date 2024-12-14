@@ -1,5 +1,5 @@
 
-use bevy_ecs::{entity::Entity, query::QueryBuilder, system::{Commands, Query, SystemState}};
+//use bevy_ecs::{entity::Entity, query::QueryBuilder, system::{Commands, Query, SystemState}};
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -15,11 +15,11 @@ use regex::Regex;
 
 use crate::get_ai_chat;
 use crate::globals::*;
-use crate::components::room::Room;
 
 pub async fn dump_world(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
     room.send(RoomMessageEventContent::notice_plain("Dumping world...")).await.unwrap();
 
+    /*
     {
         // https://github.com/bevyengine/bevy/discussions/15486
         
@@ -75,7 +75,7 @@ pub async fn dump_world(sender: OwnedUserId, text: String, room: MatrixRoom) -> 
             room.send(RoomMessageEventContent::notice_plain(str)).await.unwrap();
         }
         
-    }
+    }*/
 
     Ok(())
 }

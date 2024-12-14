@@ -1,3 +1,4 @@
+/*
 use bevy_ecs::prelude::*;
 use bevy_reflect::Reflect;
 
@@ -6,3 +7,4 @@ pub struct Monster {
     pub name: String,
     pub description: String,
 }
+*/

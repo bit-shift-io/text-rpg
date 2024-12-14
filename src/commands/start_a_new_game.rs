@@ -1,5 +1,5 @@
 
-use bevy_reflect::Reflect;
+//use bevy_reflect::Reflect;
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -12,9 +12,8 @@ use matrix_sdk::{
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
+use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
 use crate::globals::*;
-use crate::components::room::Room;
 
 
 
@@ -136,8 +135,10 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
         .replace("${extra_user_prompt}", &extra_user_prompt.to_string());
 
     let game_info = context.execute_json_prompt::<GameInfo>(game_info_prompt).await?;
+    *GLOBAL_GAME_INFO.lock().unwrap() = Some(game_info.clone());
 
     {
+        /*
         // https://github.com/bevyengine/bevy/discussions/15486
         let mut world = GLOBAL_WORLD_2.lock().unwrap();
 
@@ -146,6 +147,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
         world.spawn(GameInfoContainer {
             game_info: game_info.clone(),
         });
+        */
 
         // The OLD way I was trying to setup to use bevy ECS:
         /*

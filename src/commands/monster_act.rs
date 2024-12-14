@@ -1,5 +1,5 @@
-use bevy_ecs::{entity::Entity, system::{Commands, Query, SystemState}};
-use bevy_reflect::Reflect;
+//use bevy_ecs::{entity::Entity, system::{Commands, Query, SystemState}};
+//use bevy_reflect::Reflect;
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -13,9 +13,8 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{components::{game_info_container::{GameInfo, GameInfoContainer}, health::Health, inventory::Inventory, item::Item, monster::Monster, player_character::PlayerCharacter, room_connection::RoomConnection, room_location::RoomLocation}, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
+use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
 use crate::globals::*;
-use crate::components::room::Room;
 
 const GAME_UPDATE_RAW_PROMPT: &str = r#"
 I am a dungeon master. 
@@ -88,7 +87,7 @@ pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, pr
     let new_game_state_str = serde_json::to_string_pretty(&game_info).unwrap();
 
     // update the game state
-    let game_info_clone = {
+    let game_info_clone = context.clone_game_info().await?; /*{
         // get the GameInfoContainer component from the world
         let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
         let mut world = world_guard;
@@ -105,7 +104,7 @@ pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, pr
         let mut game_info_container = game_info_container_query.single_mut();
         game_info_container.game_info = game_info;
         game_info_container.game_info.clone()
-    };
+    };*/
 
     // form a prompt to describe the monsters action as a story
     let act_story_prompt = ACT_STORY_RAW_PROMPT
