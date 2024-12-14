@@ -3,7 +3,7 @@ use tracing::info;
 
 pub struct AiChat {
     binary_location: String,
-    config_dir: Option<String>,
+    config_file: Option<String>,
 }
 
 impl Default for AiChat {
@@ -13,10 +13,10 @@ impl Default for AiChat {
 }
 
 impl AiChat {
-    pub fn new(binary_location: String, config_dir: Option<String>) -> Self {
+    pub fn new(binary_location: String, config_file: Option<String>) -> Self {
         AiChat {
             binary_location,
-            config_dir,
+            config_file,
         }
     }
 
@@ -26,8 +26,8 @@ impl AiChat {
         command.arg("--list-models");
 
         // Add the config dir if it exists
-        if let Some(config_dir) = &self.config_dir {
-            command.env("AICHAT_CONFIG_DIR", config_dir);
+        if let Some(config_file) = &self.config_file {
+            command.env("AICHAT_CONFIG_FILE", config_file);
         }
 
         let output = command.output().expect("Failed to execute command");
@@ -47,8 +47,8 @@ impl AiChat {
         command.arg("--info");
 
         // Add the config dir if it exists
-        if let Some(config_dir) = &self.config_dir {
-            command.env("AICHAT_CONFIG_DIR", config_dir);
+        if let Some(config_file) = &self.config_file {
+            command.env("AICHAT_CONFIG_FILE", config_file);
         }
 
         let output = command.output().expect("Failed to execute command");
@@ -75,8 +75,8 @@ impl AiChat {
         if let Some(model) = model {
             command.arg("--model").arg(model);
         }
-        if let Some(config_dir) = &self.config_dir {
-            command.env("AICHAT_CONFIG_DIR", config_dir);
+        if let Some(config_file) = &self.config_file {
+            command.env("AICHAT_CONFIG_FILE", config_file);
         }
         // For each media file, add the media flag and the path to the file
         // Note that we must not consume the media files, the handles need to persist until the command is finished
@@ -89,7 +89,13 @@ impl AiChat {
         command.arg("--").arg(prompt);
         info!("Running command: {:?}", command);
 
-        let output = command.output().expect("Failed to execute command");
+        //let output = command.output().expect("Failed to execute command");
+        let output = match command.output() {
+            Ok(output) => output,
+            Err(err) => {
+                panic!("Error executing aichat command: {}", err);
+            },
+        };
 
         info!("Output: {:?}", output);
 

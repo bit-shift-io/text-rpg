@@ -1,4 +1,6 @@
 use bevy_ecs::world::World;
+use tracing::info;
+use std::fs;
 //use lazy_static::lazy_static;
 use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
 use std::sync::LazyLock;
@@ -28,8 +30,11 @@ lazy_static! {
     pub static ref GLOBAL_WORLD: Mutex<World> = Mutex::new(World::default());
 }*/
 
+
+
+
 /// Returns the backend based on the global config
 pub fn get_ai_chat() -> AiChat {
     let config = GLOBAL_CONFIG_2.lock().unwrap().clone().unwrap();
-    AiChat::new("aichat".to_string(), None) //Some("/Users/fabian/Library/Application Support/aichat/".to_owned())) //config.aichat_config_dir.clone())
+    AiChat::new("aichat".to_string(), config.aichat_config_file) //Some("/Users/fabian/Library/Application Support/aichat/".to_owned())) //config.aichat_config_dir.clone())
 }

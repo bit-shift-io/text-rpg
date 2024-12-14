@@ -34,6 +34,10 @@ RUN apt-get update && apt-get -y install sqlite3 openssl
 # Copy from the previous build
 COPY --from=build /text-rpg/target/release/text-rpg /usr/src/text-rpg
 COPY --from=build /aichat/target/release/aichat /usr/src/aichat
+
+ENV PATH="/usr/src/:$PATH"
+
+RUN ls -la /usr/src/ && echo "$PATH"
 # COPY --from=build /text-rpg/target/release/text-rpg/target/x86_64-unknown-linux-musl/release/text-rpg .
 
 # Run the binary

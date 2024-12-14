@@ -35,7 +35,10 @@ For more info refer to: https://dev.to/rogertorres/first-steps-with-docker-rust-
 
 Build the docker image first.
 
-Copy ```config.yml``` into ```~/Docker/text-tpg```
+Copy ```config.yml``` into ```~/Docker/text-rpg```.
+
+Copy your aichat config (More info here: ```https://github.com/sigoden/aichat/wiki/Configuration-Guide```) into ```~/Docker/text-rpg``` and call it ```aichat.config.yml``.
+
 ```docker-compose -f compose.yml up --build```
 
 
