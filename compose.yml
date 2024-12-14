@@ -10,4 +10,3 @@ services:
       - PGID=1001
     volumes:
       - ${HOME}/Docker/text-rpg:/data
-      - /etc/ssl:/etc/ssl
