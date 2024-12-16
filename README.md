@@ -39,7 +39,9 @@ Copy ```config.yml``` into ```~/Docker/text-rpg```.
 
 Copy your aichat config (More info here: ```https://github.com/sigoden/aichat/wiki/Configuration-Guide```) into ```~/Docker/text-rpg``` and call it ```aichat.config.yml``.
 
-```docker-compose -f compose.yml up --build```
+```docker-compose -f compose.yml up --build```.
+
+Note that once you run docker-compose, the container will start and will be started when ever docker is started on your machine.
 
 
 ## Local release builds
@@ -49,3 +51,9 @@ Copy your aichat config (More info here: ```https://github.com/sigoden/aichat/wi
 ```cargo build --release```
 
 ```cargo run --release```
+
+## TODO list
+
+* Reduce number of prompts.
+* Stop players who are dead from acting.
+* AI image generation.
