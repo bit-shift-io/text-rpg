@@ -93,6 +93,24 @@ impl CommandContext {
         }
     }
 
+    pub async fn execute_prompt(&self, prompt: String) -> Result<String, ()> {
+        self.notify_typing().await;
+
+        let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
+        match r {
+            Ok(result) => {
+                self.notify_typing().await;
+                info!("[execute_prompt] result: {}", result);
+                Ok(result)
+            },
+            Err(e) => {
+                error!("[execute_prompt] Failed to execute prompt: {}", e);
+                self.room.send(RoomMessageEventContent::notice_plain(format!("[execute_prompt] Failed to execute prompt: {}", e))).await.unwrap();
+                Err(())
+            }
+        }
+    }
+
     pub async fn execute_story_prompt(&self, prompt: String) -> Result<String, ()> {
         self.notify_typing().await;
 

@@ -108,15 +108,19 @@ The current state of the game is:
       "items": [],
       "monsters": []
     }
-  ],
-  "story_for_action": ""
+  ]
 }
+```
+
+```xml
+<story_for_action>
+</story_for_action>
 ```
 
 The player with name Fabian and has asked me to:
 Fabian attack Brons
 
-In the "story_for_action" field I need you to describe for me the action as a story.
+In the "story_for_action" xml I need you to describe for me the action as a story.
 Please include in "story_for_action" exact values for things such as damage.
 If the user is looking around, investigating or examining the room or area, ensure you include descriptions of all the "room_connections" for the room the player is located in.
 If the player moves to another room, ensure you describe the new room and any monsters it contains.
