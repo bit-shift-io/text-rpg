@@ -111,7 +111,7 @@ It has the following monsters: ${room_monsters}.
 
 pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
     let context = CommandContext::new(sender, text, room);
-    if !context.handles_room() {
+    if !context.handles_room().await {
         return Ok(());
     }
 
@@ -135,7 +135,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
         .replace("${extra_user_prompt}", &extra_user_prompt.to_string());
 
     let game_info = context.execute_json_prompt::<GameInfo>(game_info_prompt).await?;
-    *GLOBAL_GAME_INFO.lock().unwrap() = Some(game_info.clone());
+    *GLOBAL_GAME_INFO.lock().await = Some(game_info.clone());
 
     {
         /*

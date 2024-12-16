@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     let mut config: Config = serde_yml::from_str(&file_contents).unwrap();
     config.aichat_config_file = aichat_config_file;
     
-    *GLOBAL_CONFIG.lock().unwrap() = Some(config.clone());
+    *GLOBAL_CONFIG.lock().await = Some(config.clone());
     info!("config: {}", config);
 
 
@@ -119,7 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         "Party!".to_string(),
         |sender, text, room| async move {
             let context = CommandContext::new(sender, text, room);
-            if !context.handles_room() {
+            if !context.handles_room().await {
                 return Ok(());
             }
 
@@ -172,7 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
                 sender.as_str(),
                 input.replace('\n', " ")
             );
-            if let Ok(result) = get_ai_chat().execute(&None, input.to_string(), Vec::new()) {
+            if let Ok(result) = get_ai_chat().await.execute(&None, input.to_string(), Vec::new()) {
                 // Add the prefix ".response:\n" to the result
                 // That way we can identify our own responses and ignore them for context
                 info!(

@@ -2,11 +2,14 @@
 use tracing::info;
 use std::fs;
 //use lazy_static::lazy_static;
-use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
+use std::{collections::HashMap, io::Read, path::PathBuf};
 use std::sync::LazyLock;
 
 use crate::components::game_info_container::GameInfo;
 use crate::{config::Config, lib::aichat::AiChat};
+
+// https://stackoverflow.com/questions/68976937/rust-future-cannot-be-sent-between-threads-safely
+use tokio::sync::Mutex;
 
 // https://dev.to/leemeganj/how-to-use-the-lazy-initialization-pattern-with-rust-180-4n4k
 
@@ -38,7 +41,7 @@ lazy_static! {
 
 
 /// Returns the backend based on the global config
-pub fn get_ai_chat() -> AiChat {
-    let config = GLOBAL_CONFIG.lock().unwrap().clone().unwrap();
+pub async fn get_ai_chat() -> AiChat {
+    let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
     AiChat::new("aichat".to_string(), config.aichat_config_file) //Some("/Users/fabian/Library/Application Support/aichat/".to_owned())) //config.aichat_config_dir.clone())
 }

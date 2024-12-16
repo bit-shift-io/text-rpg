@@ -35,9 +35,9 @@ impl CommandContext {
     }
 
     // Are we allowed to respond to this command?
-    pub fn handles_room(&self) -> bool {
+    pub async fn handles_room(&self) -> bool {
         let room_name = self.room.name().unwrap_or_default();
-        let config = GLOBAL_CONFIG.lock().unwrap().clone().unwrap();
+        let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
 
         match config.rooms {
             Some(rooms) => rooms.iter().any(|room| *room == room_name),
@@ -79,15 +79,12 @@ impl CommandContext {
     }
 
     pub async fn clone_game_info(&self) -> Result<GameInfo, ()> {
-        // todo: https://stackoverflow.com/questions/68976937/rust-future-cannot-be-sent-between-threads-safely
-        // need to put something in the chat to say to start the game!
-
-        let mutex_guard = GLOBAL_GAME_INFO.lock().unwrap();
+        let mutex_guard = GLOBAL_GAME_INFO.lock().await;
         let game_info_option = mutex_guard.as_ref();
 
         if game_info_option.is_none() {
             error!("No game in progress. Please run \"DM start\".");
-            //self.room_send("No game in progress. Please run \"DM start\".").await?;
+            self.room_send("No game in progress. Please run \"DM start\".").await?;
         }
 
         match game_info_option {
@@ -99,7 +96,7 @@ impl CommandContext {
     pub async fn execute_story_prompt(&self, prompt: String) -> Result<String, ()> {
         self.notify_typing().await;
 
-        let r = get_ai_chat().execute(&None, prompt, Vec::new());
+        let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
         match r {
             Ok(result) => {
                 self.notify_typing().await;
@@ -120,7 +117,7 @@ impl CommandContext {
     pub async fn execute_json_prompt<T: DeserializeOwned + Clone>(&self, prompt: String) -> Result<T, ()> {
         self.notify_typing().await;
 
-        let r = get_ai_chat().execute(&None, prompt, Vec::new());
+        let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
         match r {
             Ok(result) => {
                 self.notify_typing().await;
