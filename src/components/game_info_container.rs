@@ -55,7 +55,7 @@ pub struct MonsterInfo {
 
 #[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct PlayerCharacterInfo {
-    pub matrix_display_name: String,
+    pub name: String,
     pub character_class: String,
     pub abilities: Vec<String>,
     pub items: Vec<String>,

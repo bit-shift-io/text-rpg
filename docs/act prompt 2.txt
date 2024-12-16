@@ -73,7 +73,7 @@ The previous state of the game was:
   ],
   "player_characters": [
     {
-      "matrix_display_name": "Brons",
+      "name": "Brons",
       "character_class": "Warrior",
       "abilities": ["Power Attack"],
       "items": ["Longsword", "Shield"],
@@ -85,7 +85,7 @@ The previous state of the game was:
       "wisdom": 8
     },
     {
-      "matrix_display_name": "Fabian",
+      "name": "Fabian",
       "character_class": "Rogue",
       "abilities": ["Sneak Attack"],
       "items": ["Daggers", "Lockpicks"],
@@ -185,7 +185,7 @@ The previous state of the game was:
   ],
   "player_characters": [
     {
-      "matrix_display_name": "Brons",
+      "name": "Brons",
       "character_class": "Warrior",
       "abilities": ["Power Attack"],
       "items": ["Longsword", "Shield"],
@@ -197,7 +197,7 @@ The previous state of the game was:
       "wisdom": 8
     },
     {
-      "matrix_display_name": "Fabian",
+      "name": "Fabian",
       "character_class": "Rogue",
       "abilities": ["Sneak Attack"],
       "items": ["Daggers", "Lockpicks"],

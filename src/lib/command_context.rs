@@ -69,7 +69,7 @@ impl CommandContext {
     }
 
     pub async fn room_send(&self, msg: &str) -> Result<String, ()> {
-        match self.room.send(RoomMessageEventContent::notice_plain(msg.clone())).await {
+        match self.room.send(RoomMessageEventContent::notice_plain(msg)).await {
             Ok(response) => Ok("".to_string()),
             Err(e) => {
                 error!("Error sending message: {}", e);

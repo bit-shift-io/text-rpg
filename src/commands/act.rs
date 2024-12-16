@@ -27,7 +27,7 @@ The current state of the game is:
 ${game_state}
 ```
 
-The player with "matrix_display_name" is called "${matrix_display_name}" and has asked me to:
+The player with "name" is called "${name}" and has asked me to:
 ${action}
 
 Please respond with the updated state of the game.
@@ -51,7 +51,7 @@ The new state of the game after the players action is:
 ${new_game_state}
 ```
 
-The player with "matrix_display_name" is called "${matrix_display_name}" and has asked me to:
+The player with "name" is called "${name}" and has asked me to:
 ${action}
 
 Please include in your response exact values for things such as damage.
@@ -61,8 +61,8 @@ If the player moves to another room, ensure you describe the new room and any mo
 "#;
 
 fn is_alive_monster_in_same_room_as_sender(game_info: &GameInfo, acting_player_member: &RoomMember) -> bool {
-    let matrix_display_name = acting_player_member.display_name().unwrap();
-    let player_character = game_info.player_characters.iter().find(|character| character.matrix_display_name == matrix_display_name).unwrap();
+    let name = acting_player_member.display_name().unwrap();
+    let player_character = game_info.player_characters.iter().find(|character| character.name == name).unwrap();
     let room_number = player_character.room_number;
     let room = game_info.rooms.iter().find(|room| room.room_number == room_number).unwrap();
     let monster_in_same_room = room.monsters.len() > 0;
@@ -111,7 +111,7 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
     let game_update_prompt = GAME_UPDATE_RAW_PROMPT
         .replace("${game_state}", &json)
         .replace("${action}", &action_prompt)
-        .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
+        .replace("${name}", acting_player_member.display_name().unwrap());
 
     let game_info = context.execute_json_prompt::<GameInfo>(game_update_prompt).await?;
     let new_game_state_str = serde_json::to_string_pretty(&game_info).unwrap();
@@ -141,7 +141,7 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
         .replace("${previous_game_state}", &json)
         .replace("${new_game_state}", &new_game_state_str)
         .replace("${action}", &action_prompt)
-        .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
+        .replace("${name}", acting_player_member.display_name().unwrap());
 
     context.execute_story_prompt(act_story_prompt).await?;
 

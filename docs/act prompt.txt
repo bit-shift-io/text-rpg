@@ -73,7 +73,7 @@ The current state of the game is:
   ],
   "player_characters": [
     {
-      "matrix_display_name": "Brons",
+      "name": "Brons",
       "character_class": "Warrior",
       "abilities": ["Power Attack"],
       "items": ["Longsword", "Shield"],
@@ -85,7 +85,7 @@ The current state of the game is:
       "wisdom": 8
     },
     {
-      "matrix_display_name": "Fabian",
+      "name": "Fabian",
       "character_class": "Rogue",
       "abilities": ["Sneak Attack"],
       "items": ["Daggers", "Lockpicks"],

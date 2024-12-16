@@ -19,7 +19,7 @@ use crate::globals::*;
 const GAME_UPDATE_RAW_PROMPT: &str = r#"
 I am a dungeon master. 
 
-The player with "matrix_display_name" is called "${matrix_display_name}" and has asked me to make the following action:
+The player with "name" is called "${name}" and has asked me to make the following action:
 ${action}
 
 The previous state of the game was:
@@ -45,7 +45,7 @@ Do not prompt for further instructions, if you are unsure make your best guess.
 const ACT_STORY_RAW_PROMPT: &str = r#"
 I am a dungeon master.
 
-The player with "matrix_display_name" is called "${matrix_display_name}" and has asked me to make the following action:
+The player with "name" is called "${name}" and has asked me to make the following action:
 ${action}
 
 I have modified the game state in accordance with the players action. I have then given the monsters in the same room as the player a chance to make an actions.
@@ -81,7 +81,7 @@ pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, pr
         .replace("${previous_game_state}", &previous_game_state_str)
         .replace("${new_game_state}", &new_game_state_str)
         .replace("${action}", &action_prompt)
-        .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
+        .replace("${name}", acting_player_member.display_name().unwrap());
 
     let game_info = context.execute_json_prompt::<GameInfo>(game_update_prompt).await?;
     let new_game_state_str = serde_json::to_string_pretty(&game_info).unwrap();
@@ -111,7 +111,7 @@ pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, pr
         .replace("${previous_game_state}", &new_game_state_str)
         .replace("${new_game_state}", &new_game_state_str)
         .replace("${action}", &action_prompt)
-        .replace("${matrix_display_name}", acting_player_member.display_name().unwrap());
+        .replace("${name}", acting_player_member.display_name().unwrap());
 
     context.execute_story_prompt(act_story_prompt).await?;
     Ok(())

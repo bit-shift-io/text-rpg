@@ -125,7 +125,3 @@ Please respond with the updated state of the game.
 The format must be the same as the current game state, do not add additional fields, you may only modify existing fields.
 I need the response in JSON format.
 Do not prompt for further instructions, if you are unsure make your best guess.
-
-
-
-Notes: Change "matrix_display_name" to "name" for the LLM!

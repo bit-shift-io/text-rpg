@@ -67,7 +67,7 @@ There are ${num_players} players. The names of the players are: ${player_names}.
 
 "player_characters" should be an arry with the following structure:
 {
-    "matrix_display_name": {The player name to assign this character too},
+    "name": {The player name to assign this character too},
     "character_class": {The character class},
     "abilities": [A comma separated list of special abilties the character has],
     "items": [A comma separated list of items the character has],
@@ -209,7 +209,7 @@ pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoo
 
         // create players
         for player_character_info in &game_info.player_characters {
-            let member_idx = player_members.iter().position(|player_member| player_member.display_name().unwrap() == player_character_info.matrix_display_name).unwrap();
+            let member_idx = player_members.iter().position(|player_member| player_member.display_name().unwrap() == player_character_info.name).unwrap();
             let player_member = &player_members[member_idx];
             let matrix_username = player_member.user_id().as_str();
 
