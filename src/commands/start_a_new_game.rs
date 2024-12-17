@@ -272,7 +272,7 @@ mod tests {
             ```
             some other text
         "#;
-        let results = extract_json(text);
+        let results = extract_json(text).unwrap();
         assert_eq!(results.len(), 1);
 
         let stripped_str = results[0].replace("\n", " ");

@@ -146,7 +146,7 @@ impl CommandContext {
                     self.room.send(RoomMessageEventContent::notice_plain(result.clone())).await.unwrap();
                 }
                 
-                let json_strs = extract_json(&result);
+                let json_strs = extract_json(&result)?;
                 if json_strs.len() == 0 {
                     self.room.send(RoomMessageEventContent::notice_plain("[execute_json_prompt] Failed to get JSON from response.")).await.unwrap();
                 }

@@ -11,7 +11,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract::{extract_json, extract_xml}}};
+use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract::{extract_blocks, extract_json, RE_EXTRACT_STORY_BLOCK}}};
 use crate::globals::*;
 
 use super::monster_act::monster_act;
@@ -69,16 +69,14 @@ The current state of the game is:
 ${game_state}
 ```
 
-```xml
-<story_for_action>
-</story_for_action>
+```story
 ```
 
 The player with name ${name} and has asked me to:
 ${action}
 
-In the "story_for_action" xml I need you to describe for me the action as a story.
-Please include in "story_for_action" exact values for things such as damage.
+In the "story" block I need you to describe for me the action as a story.
+Please include in "story" exact values for things such as damage.
 If the user is looking around, investigating or examining the room or area, ensure you include descriptions of all the "room_connections" for the room the player is located in.
 If the player moves to another room, ensure you describe the new room and any monsters it contains.
 
@@ -123,24 +121,22 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
 
     let act_response = context.execute_prompt(act_prompt).await?;
 
-    let json_strs = extract_json(&act_response);
+    let json_strs = extract_json(&act_response)?;
     if json_strs.len() == 0 {
         context.room.send(RoomMessageEventContent::notice_plain("[act] Failed to get JSON from response.")).await.unwrap();
         return Ok(());
     }
 
-    let xml_strs = extract_xml(&act_response);
-    if xml_strs.len() == 0 {
-        context.room.send(RoomMessageEventContent::notice_plain("[act] Failed to get XML from response.")).await.unwrap();
+    let story_strs = extract_blocks(&RE_EXTRACT_STORY_BLOCK, &act_response)?;
+    if story_strs.len() == 0 {
+        context.room.send(RoomMessageEventContent::notice_plain("[act] Failed to get story block from response.")).await.unwrap();
         return Ok(());
     }
 
     let new_game_info = GameInfo::from_str(&json_strs[0])?; // todo: proper error handling here
     *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
 
-    // xml contains the story
-    context.room.send(RoomMessageEventContent::notice_plain(xml_strs[0].clone())).await.unwrap();
-
+    context.room.send(RoomMessageEventContent::notice_plain(story_strs[0].clone())).await.unwrap();
 
     let alive_monster_in_same_room_as_sender = is_alive_monster_in_same_room_as_sender(&new_game_info, &acting_player_member);
     if alive_monster_in_same_room_as_sender {
