@@ -21,6 +21,20 @@ pub struct GameInfo {
     pub objectives: Vec<ObjectiveInfo>,
 }
 
+impl GameInfo {
+    pub fn from_str(str: &str) -> Result<GameInfo, ()> {
+        match serde_json::from_str::<GameInfo>(&str) {
+            Ok(obj) => {
+                let c = obj.clone();
+                Ok(c)
+            },
+            Err(err) => {
+                Err(())
+            }
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct RoomInfo {
     pub room_number: usize,

@@ -11,7 +11,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
+use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract::{extract_json, extract_xml}}};
 use crate::globals::*;
 
 use super::monster_act::monster_act;
@@ -113,16 +113,39 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
         .replace("act", "")
         .replace("verbose", "");
   
-    let current_game_info = context.clone_game_info().await?;
-    let current_game_info_json = serde_json::to_string_pretty(&current_game_info).unwrap();
+    let old_game_info = context.clone_game_info().await?;
+    let old_game_info_json = serde_json::to_string_pretty(&old_game_info).unwrap();
+
     let act_prompt = ACT_PROMPT
-        .replace("${game_state}", &current_game_info_json)
+        .replace("${game_state}", &old_game_info_json)
         .replace("${action}", &action_prompt)
         .replace("${name}", acting_player_member.display_name().unwrap());
 
     let act_response = context.execute_prompt(act_prompt).await?;
 
-    // todo: extract xml and json....
+    let json_strs = extract_json(&act_response);
+    if json_strs.len() == 0 {
+        context.room.send(RoomMessageEventContent::notice_plain("[act] Failed to get JSON from response.")).await.unwrap();
+        return Ok(());
+    }
+
+    let xml_strs = extract_xml(&act_response);
+    if xml_strs.len() == 0 {
+        context.room.send(RoomMessageEventContent::notice_plain("[act] Failed to get XML from response.")).await.unwrap();
+        return Ok(());
+    }
+
+    let new_game_info = GameInfo::from_str(&json_strs[0])?; // todo: proper error handling here
+    *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
+
+    // xml contains the story
+    context.room.send(RoomMessageEventContent::notice_plain(xml_strs[0].clone())).await.unwrap();
+
+
+    let alive_monster_in_same_room_as_sender = is_alive_monster_in_same_room_as_sender(&new_game_info, &acting_player_member);
+    if alive_monster_in_same_room_as_sender {
+        return monster_act(context.sender, context.text, context.room, old_game_info, new_game_info, action_prompt, &acting_player_member).await;
+    }
 
 /*
     let game_update_prompt = GAME_UPDATE_RAW_PROMPT

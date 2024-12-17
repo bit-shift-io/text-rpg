@@ -13,7 +13,7 @@ use serde::{de::{DeserializeOwned, IntoDeserializer}, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{commands::monster_act::monster_act, components::game_info_container::GameInfo, get_ai_chat, lib::extract_json_from_response::extract_json_from_response};
+use crate::{commands::monster_act::monster_act, components::game_info_container::GameInfo, get_ai_chat, lib::extract::extract_json};
 use crate::globals::*;
 
 pub struct CommandContext {
@@ -146,7 +146,7 @@ impl CommandContext {
                     self.room.send(RoomMessageEventContent::notice_plain(result.clone())).await.unwrap();
                 }
                 
-                let json_strs = extract_json_from_response(&result);
+                let json_strs = extract_json(&result);
                 if json_strs.len() == 0 {
                     self.room.send(RoomMessageEventContent::notice_plain("[execute_json_prompt] Failed to get JSON from response.")).await.unwrap();
                 }

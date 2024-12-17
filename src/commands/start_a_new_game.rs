@@ -12,7 +12,7 @@ use matrix_sdk::{
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract_json_from_response::extract_json_from_response}};
+use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract::extract_json}};
 use crate::globals::*;
 
 
@@ -262,7 +262,7 @@ mod tests {
 
 
     #[test]
-    fn test_extract_json_from_response() {
+    fn test_extract_json() {
         let text = r#"
             blah blah 
             ```json
@@ -272,7 +272,7 @@ mod tests {
             ```
             some other text
         "#;
-        let results = extract_json_from_response(text);
+        let results = extract_json(text);
         assert_eq!(results.len(), 1);
 
         let stripped_str = results[0].replace("\n", " ");
