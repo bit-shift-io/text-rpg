@@ -1,6 +1,6 @@
 use matrix_sdk::ruma::events::room::message::RoomMessageEventContent;
 
-use crate::lib::command_context::CommandContext;
+use crate::services::command_context::CommandContext;
 
 
 const HELP_STR: &str = r#"

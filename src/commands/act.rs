@@ -11,7 +11,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{get_ai_chat, lib::{command_context::CommandContext, extract::{extract_blocks, extract_json, RE_EXTRACT_STORY_BLOCK}, game_info::GameInfo}};
+use crate::{get_ai_chat, services::{command_context::CommandContext, extract::{extract_blocks, extract_json, RE_EXTRACT_STORY_BLOCK}, game_info::GameInfo}};
 use crate::globals::*;
 
 use super::monster_act::monster_act;

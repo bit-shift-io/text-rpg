@@ -6,7 +6,7 @@ use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
 
 use config::Config;
 use headjack::*;
-use lib::{bot_ext::BotExt, command_context::CommandContext};
+use services::{bot_ext::BotExt, command_context::CommandContext};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::MessagesOptions,
@@ -18,30 +18,13 @@ use matrix_sdk::{
 };
 use serde::Deserialize;
 use tracing::{error, info};
-//use lazy_static::lazy_static;
 
-
-mod lib {
-    pub mod aichat;
-    pub mod command_context;
-    pub mod extract;
-    pub mod bot_ext;
-    pub mod game_info;
-}
-
+mod services;
 mod globals;
-use globals::*;
-
 mod config;
+mod commands;
 
-mod commands {
-    pub mod start;
-    pub mod dump;
-    pub mod act;
-    pub mod monster_act;
-    pub mod help;
-}
-
+use globals::*;
 use commands::{act::act, dump::dump, help::help, start::start};
 
 #[tokio::main]

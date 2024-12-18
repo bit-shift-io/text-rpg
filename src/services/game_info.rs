@@ -6,7 +6,6 @@ use serde_diff::{Apply, Diff, SerdeDiff};
 pub struct GameInfo {
     pub rooms: Vec<RoomInfo>,
     pub room_connections: Vec<RoomConnectionInfo>,
-    pub monsters: Vec<MonsterInfo>,
     pub player_characters: Vec<PlayerCharacterInfo>,
     pub objectives: Vec<ObjectiveInfo>,
 }
@@ -29,7 +28,7 @@ pub struct RoomInfo {
     pub room_number: usize,
     pub name: String,
     pub description: String,
-    pub monsters: Vec<String>,
+    pub monsters: Vec<MonsterInfo>,
     pub items: Vec<String>,
     pub is_start_room: bool,
     pub is_end_room: bool,
@@ -76,4 +75,5 @@ pub struct ObjectiveInfo {
     pub goal: String,
     pub items: Vec<String>,
     pub monsters: Vec<String>,
+    pub completed: bool,
 }

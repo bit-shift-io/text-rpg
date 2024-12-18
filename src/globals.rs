@@ -3,8 +3,8 @@ use std::fs;
 use std::{collections::HashMap, io::Read, path::PathBuf};
 use std::sync::LazyLock;
 
-use crate::lib::game_info::GameInfo;
-use crate::{config::Config, lib::aichat::AiChat};
+use crate::services::game_info::GameInfo;
+use crate::{config::Config, services::aichat::AiChat};
 
 // https://stackoverflow.com/questions/68976937/rust-future-cannot-be-sent-between-threads-safely
 use tokio::sync::Mutex;

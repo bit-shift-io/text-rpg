@@ -11,7 +11,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{get_ai_chat, lib::{command_context::CommandContext, extract::extract_json, game_info::GameInfo}};
+use crate::{get_ai_chat, services::{command_context::CommandContext, extract::extract_json, game_info::GameInfo}};
 use crate::globals::*;
 
 const GAME_UPDATE_RAW_PROMPT: &str = r#"
