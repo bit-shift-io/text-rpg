@@ -25,8 +25,7 @@ impl GameInfo {
     pub fn from_str(str: &str) -> Result<GameInfo, ()> {
         match serde_json::from_str::<GameInfo>(&str) {
             Ok(obj) => {
-                let c = obj.clone();
-                Ok(c)
+                Ok(obj)
             },
             Err(err) => {
                 Err(())

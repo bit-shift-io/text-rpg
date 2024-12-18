@@ -1,20 +1,3 @@
-use tracing::{error, info};
-use matrix_sdk::{
-    media::{MediaFileHandle, MediaFormat, MediaRequest},
-    room::{MessagesOptions, RoomMember},
-    ruma::{
-        api::client::membership::joined_members, events::room::message::{MessageType, RoomMessageEventContent}, OwnedUserId
-    },
-    Room as MatrixRoom, RoomMemberships,
-};
-use serde::{de::IntoDeserializer, Deserialize, Serialize};
-use regex::Regex;
-
-use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract::{extract_blocks, extract_json, RE_EXTRACT_STORY_BLOCK}}};
-use crate::globals::*;
-
-
-const START_PROMPT: &str = r#"
 I am a dungeon master. I need to create a setup for the game.
 
 I need a JSON representation for the game state.
@@ -59,7 +42,7 @@ I need a list of monsters with any special abilities they might have.
 }
 
 I need a list of player characters that describe the character for each player who is playing.
-There are ${num_players} players. The names of the players are: ${player_names}.
+There are 2 players. The names of the players are: Fabian, Brons.
 
 "player_characters" should be an arry with the following structure:
 {
@@ -95,56 +78,4 @@ In this story block, enter a short story that includes:
 - The starting room and any monsters in that room
 
 The players have provided the following additional information:
-${extra_user_prompt}
-"#;
-
-pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
-    let context = CommandContext::new(sender, text, room);
-    if !context.handles_room().await {
-        return Ok(());
-    }
-
-    context.notify_typing().await;
-
-    let player_members = context.all_player_room_members().await;
-    let num_players = player_members.len();
-    let player_names_str = player_members.clone().into_iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect::<Vec<String>>().join(", ");
-    
-
-    // any text left over should be feed to the gmae info prompt to let the user modify the game
-    // for example, they might want to assign certain character classes to certain players or setup a theme for the 
-    // game
-    let extra_user_prompt = context.text
-        .replace("DM", "")
-        .replace("start", "")
-        .replace("verbose", "");
-
-
-
-    let start_prompt = START_PROMPT
-        .replace("${num_players}", &num_players.to_string())
-        .replace("${player_names}", &player_names_str.to_string())
-        .replace("${extra_user_prompt}", &extra_user_prompt.to_string());
-
-
-    let start_response = context.execute_prompt(start_prompt).await?;
-
-    let json_strs = extract_json(&start_response)?;
-    if json_strs.len() == 0 {
-        context.room.send(RoomMessageEventContent::notice_plain("[start] Failed to get JSON from response.")).await.unwrap();
-        return Ok(());
-    }
-
-    let story_strs = extract_blocks(&RE_EXTRACT_STORY_BLOCK, &start_response)?;
-    if story_strs.len() == 0 {
-        context.room.send(RoomMessageEventContent::notice_plain("[start] Failed to get story block from response.")).await.unwrap();
-        return Ok(());
-    }
-
-    let new_game_info = GameInfo::from_str(&json_strs[0])?; // todo: proper error handling here
-    *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
-
-    context.room.send(RoomMessageEventContent::notice_plain(story_strs[0].clone())).await.unwrap();
-
-    Ok(())
-}
+Set the game in egypt.

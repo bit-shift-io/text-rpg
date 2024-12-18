@@ -78,6 +78,7 @@ impl CommandContext {
         }
     }
 
+    // todo: make a version the returns a ref.
     pub async fn clone_game_info(&self) -> Result<GameInfo, ()> {
         let mutex_guard = GLOBAL_GAME_INFO.lock().await;
         let game_info_option = mutex_guard.as_ref();
