@@ -1,122 +1,189 @@
-I am a dungeon master. A player has asked me to take an action.
-I need to take the current state of the game and update it to reflect the players action.
+I am a dungeon master. I need you to take the current state of the game and update it to reflect a players action.
 
+The player with name Fabian and has asked me to perform the following action:
+Attack Mummy.
+
+I need you to return a JSON object placed between the opening XML tag <json> and the closing xml tag </json>.
 The current state of the game is:
-```json
+<json>
 {
   "rooms": [
     {
       "room_number": 1,
-      "name": "Entrance Hall",
-      "description": "A grand hall with a high ceiling and a mosaic floor depicting a fierce dragon. Dust covers the ancient tapestries on the walls.",
-      "monsters": [],
-      "items": ["Dusty Tapestry", "Small Key"],
+      "name": "The Entrance of the Tomb",
+      "description": "You find yourself standing in front of the entrance of an ancient Egyptian tomb. The air is thick with the scent of incense and the sound of distant chanting can be heard.",
+      "items": "Torch, Map",
       "is_start_room": true,
-      "is_end_room": false
+      "is_end_room": false,
+      "monsters": [
+        {
+          "name": "Mummy",
+          "description": "A reanimated corpse wrapped in bandages.",
+          "abilities": "Regeneration, Curse",
+          "health": 100,
+          "strength": 10,
+          "dexterity": 5,
+          "constitution": 15,
+          "intelligence": 2,
+          "wisdom": 3,
+          "items": "Tombstone, Sarcophagus"
+        }
+      ]
     },
     {
       "room_number": 2,
-      "name": "Armory",
-      "description": "Rows of rusted weapons line the walls, and shattered suits of armor stand like empty guardians. A heavy chest sits in the corner.",
-      "monsters": ["Skeleton Warrior"],
-      "items": ["Rusted Sword", "Healing Potion"],
+      "name": "The Chamber of the Gods",
+      "description": "You enter a grand chamber filled with ancient artifacts and treasures. The walls are adorned with intricate carvings and the air is thick with the scent of gold.",
+      "items": "Golden Idol, Scroll",
       "is_start_room": false,
-      "is_end_room": false
+      "is_end_room": false,
+      "monsters": [
+        {
+          "name": "Sphinx",
+          "description": "A mythical creature with the body of a lion and the head of a human.",
+          "abilities": "Wisdom, Strength",
+          "health": 150,
+          "strength": 15,
+          "dexterity": 10,
+          "constitution": 20,
+          "intelligence": 5,
+          "wisdom": 10,
+          "items": "Golden Idol, Scroll"
+        }
+      ]
     },
     {
       "room_number": 3,
-      "name": "Throne Room",
-      "description": "A majestic throne of carved obsidian stands on a dais at the far end of the room. A shimmering portal shimmers behind it.",
-      "monsters": ["Goblin King"],
-      "items": ["Goblin King's Crown"],
+      "name": "The Hall of the Dead",
+      "description": "You find yourself in a dark and foreboding hall filled with the whispers of the dead. The air is cold and damp, and the sound of distant drums can be heard.",
+      "items": "Amulet, Dagger",
       "is_start_room": false,
-      "is_end_room": true
+      "is_end_room": false,
+      "monsters": [
+        {
+          "name": "Ghost",
+          "description": "A vengeful spirit of the dead.",
+          "abilities": "Telekinesis, Possession",
+          "health": 50,
+          "strength": 5,
+          "dexterity": 10,
+          "constitution": 10,
+          "intelligence": 15,
+          "wisdom": 20,
+          "items": "Amulet, Dagger"
+        }
+      ]
+    },
+    {
+      "room_number": 4,
+      "name": "The Temple of the Sun",
+      "description": "You enter a grand temple dedicated to the worship of the sun god. The air is warm and bright, and the sound of chanting can be heard.",
+      "items": "Holy Water, Sword",
+      "is_start_room": false,
+      "is_end_room": false,
+      "monsters": [
+        {
+          "name": "Priest",
+          "description": "A devoted servant of the sun god.",
+          "abilities": "Healing, Protection",
+          "health": 100,
+          "strength": 10,
+          "dexterity": 5,
+          "constitution": 15,
+          "intelligence": 2,
+          "wisdom": 3,
+          "items": "Holy Water, Sword"
+        }
+      ]
     }
   ],
   "room_connections": [
     {
-      "connected_room_numbers": [1, 2],
-      "connection_type": "Door",
-      "description": "A heavy wooden door, slightly ajar."
+      "connected_room_numbers": [
+        1,
+        2
+      ],
+      "connection_type": "door",
+      "description": "A grand stone door leads to the Chamber of the Gods."
     },
     {
-      "connected_room_numbers": [2, 3],
-      "connection_type": "Secret Passage",
-      "description": "A narrow passage hidden behind a tapestry."
-    }
-  ],
-  "monsters": [
-    {
-      "name": "Skeleton Warrior",
-      "description": "An animated skeleton clad in rusty armor.",
-      "abilities": ["Undead Fortitude"],
-      "health": 25,
-      "strength": 14,
-      "dexterity": 10,
-      "constitution": 15,
-      "intelligence": 6,
-      "wisdom": 8,
-      "items": ["Rusted Axe"]
+      "connected_room_numbers": [
+        2,
+        3
+      ],
+      "connection_type": "portal",
+      "description": "A mystical portal leads to the Hall of the Dead."
     },
     {
-      "name": "Goblin King",
-      "description": "A larger, more menacing goblin with a crude crown.",
-      "abilities": ["Command Goblins"],
-      "health": 35,
-      "strength": 12,
-      "dexterity": 14,
-      "constitution": 12,
-      "intelligence": 10,
-      "wisdom": 9,
-      "items": ["Goblin King's Scepter"]
+      "connected_room_numbers": [
+        3,
+        4
+      ],
+      "connection_type": "door",
+      "description": "A stone door leads to the Temple of the Sun."
     }
   ],
   "player_characters": [
     {
-      "name": "Brons",
+      "name": "Fabian",
       "character_class": "Warrior",
-      "abilities": ["Power Attack"],
-      "items": ["Longsword", "Shield"],
-      "health": 40,
-      "strength": 16,
-      "dexterity": 12,
-      "constitution": 14,
-      "intelligence": 10,
-      "wisdom": 8
+      "abilities": "Strength, Constitution",
+      "items": "Torch, Sword",
+      "room_number": 1,
+      "health": 100,
+      "strength": 15,
+      "dexterity": 10,
+      "constitution": 20,
+      "intelligence": 5,
+      "wisdom": 3
     },
     {
-      "name": "Fabian",
-      "character_class": "Rogue",
-      "abilities": ["Sneak Attack"],
-      "items": ["Daggers", "Lockpicks"],
-      "health": 35,
-      "strength": 10,
-      "dexterity": 18,
-      "constitution": 12,
-      "intelligence": 14,
-      "wisdom": 10
+      "name": "Brons",
+      "character_class": "Mage",
+      "abilities": "Intelligence, Wisdom",
+      "items": "Map, Scroll",
+      "room_number": 1,
+      "health": 100,
+      "strength": 5,
+      "dexterity": 10,
+      "constitution": 10,
+      "intelligence": 20,
+      "wisdom": 15
     }
   ],
   "objectives": [
     {
-      "goal": "Find the Goblin King's Crown",
-      "items": ["Goblin King's Crown"],
-      "monsters": []
-    },
-    {
-      "goal": "Escape through the portal",
-      "items": [],
-      "monsters": []
+      "goal": "Retrieve the Golden Idol",
+      "items": "Golden Idol",
+      "monsters": "Sphinx",
+      "completed": false
     }
   ]
 }
+</json>
 
-```
+If the user attacks a monster, the monster also performs an action and this should be reflected in the game state JSON.
 
-The player has asked me to:
-Fabian attack Brons
+The format must be the same as the current game state, do not add additional fields, you may only modify existing fields.
+Do not prompt for further instructions, if you are unsure make your best guess.
 
-I need the response in JSON format.
-Do not include comments within the JSON structure.
+I also need a seperate story placed between an opening xml tag <story> and the closing xml tag </story>.
 
-Give me a diff I can apply to the game state.
+In the story I need you to:
+- Describe for me the players action as a story.
+- Describe the consequences of the players actions, which should align with the changes you make to the JSON.
+- Include exact values for things such as damage.
+
+If the user is looking around, investigating or examining the room or area, then include the following in the story:
+- Describe the room they are in.
+- Describe the entrances/exits to the room they are in that are not hidden (unless the player is specifically searching for hidden enterances).
+- Describe any items in the room they are in that are not hidden (unless the player is specifically searching for hidden items).
+- Describe any monsters in the room they are in that are not hidden (unless the player is specifically searching for hidden monsters).
+
+If the player moves to another room, then include the following in the story:
+- Describe the new room.
+- Describe monsters in the new room.
+
+If any monsters performs an action after the player, then include the following in the story:
+- Describe the monsters action.
+- Include exact values for things such as damage.

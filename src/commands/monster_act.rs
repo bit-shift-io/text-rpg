@@ -1,3 +1,4 @@
+/* 
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -91,4 +92,4 @@ pub async fn monster_act(context: CommandContext, previous_game_state: GameInfo,
 
     context.execute_story_prompt(act_story_prompt).await?;
     Ok(())
-}
+}*/

@@ -13,7 +13,7 @@ use serde::{de::{DeserializeOwned, IntoDeserializer}, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{commands::monster_act::monster_act, get_ai_chat, services::extract::extract_json};
+use crate::get_ai_chat;
 use crate::globals::*;
 
 use super::game_info::GameInfo;
@@ -113,7 +113,7 @@ impl CommandContext {
             }
         }
     }
-
+/* 
     pub async fn execute_story_prompt(&self, prompt: String) -> Result<String, ()> {
         self.notify_typing().await;
 
@@ -175,5 +175,5 @@ impl CommandContext {
                 Err(())
             }
         }
-    }
+    }*/
 }

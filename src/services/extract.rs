@@ -2,6 +2,7 @@ use regex::Regex;
 use tracing::{error, info};
 use std::sync::LazyLock;
 
+/* 
 pub fn extract_json(hay: &str) -> Result<Vec<String>, ()> {
     let re = match Regex::new(r"```json((?:.|\n)*?)```") {
         Ok(re) => re,
@@ -42,7 +43,7 @@ pub fn extract_blocks(re: &Regex, hay: &str) -> Result<Vec<String>, ()> {
         return str;
     }).collect::<Vec<_>>();
     Ok(results)
-}
+}*/
 
 pub fn extract_between(opening_tag: &str, closing_tag: &str, hay: &str) -> Result<Vec<String>, ()> {
     let formatted = format!(r"{}((?:.|\n)*?){}", opening_tag, closing_tag);

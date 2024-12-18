@@ -1,5 +1,3 @@
-use matrix_sdk::ruma::events::room::message::RoomMessageEventContent;
-
 use crate::services::command_context::CommandContext;
 
 
@@ -12,6 +10,6 @@ const HELP_STR: &str = r#"
 "#;
 
 pub async fn help(context: CommandContext) -> Result<(), ()> {
-    context.room.send(RoomMessageEventContent::notice_plain(HELP_STR)).await.unwrap();
+    context.room_send(HELP_STR).await.unwrap();
     Ok(())
 }

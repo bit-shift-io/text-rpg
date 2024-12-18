@@ -1,4 +1,3 @@
-use matrix_sdk::ruma::events::room::message::RoomMessageEventContent;
 use tracing::{error, info};
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
@@ -114,13 +113,13 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
 
     let json_strs = extract_between("<json>", "</json>", &start_response)?;
     if json_strs.len() == 0 {
-        context.room.send(RoomMessageEventContent::notice_plain("[start] Failed to get JSON from response.")).await.unwrap();
+        context.room_send("[start] Failed to get JSON from response.").await.unwrap();
         return Ok(());
     }
 
     let story_strs = extract_between("<story>", "</story>", &start_response)?;
     if story_strs.len() == 0 {
-        context.room.send(RoomMessageEventContent::notice_plain("[start] Failed to get story block from response.")).await.unwrap();
+        context.room_send("[start] Failed to get story block from response.").await.unwrap();
         return Ok(());
     }
 
@@ -128,12 +127,12 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
         Ok(info) => info,
         Err(e) => {
             error!("Failed to parse JSON: {}", &json_strs[0]);
-            context.room.send(RoomMessageEventContent::notice_plain("Failed to parse JSON.")).await.unwrap();
+            context.room_send("Failed to parse JSON.").await.unwrap();
             return Ok(());
         }
     };
     *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
 
-    context.room.send(RoomMessageEventContent::notice_plain(story_strs[0].clone())).await.unwrap();
+    context.room_send(&story_strs[0]).await.unwrap();
     Ok(())
 }
