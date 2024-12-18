@@ -1,15 +1,5 @@
-//use bevy_ecs::prelude::*;
-//use bevy_reflect::Reflect;
 use serde::{Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
-
-/*
-#[derive(Component, Reflect, Debug)]
-pub struct GameInfoContainer {
-    pub game_info: GameInfo,
-}
-*/
-
 
 
 #[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]

@@ -40,15 +40,6 @@ mod commands {
 }
 
 mod components {
-    pub mod player_character;
-    pub mod player;
-    pub mod monster;
-    pub mod room_connection;
-    pub mod room;
-    pub mod room_location;
-    pub mod item;
-    pub mod inventory;
-    pub mod health;
     pub mod game_info_container;
 }
 
