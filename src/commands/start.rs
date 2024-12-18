@@ -10,7 +10,7 @@ use matrix_sdk::{
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract::{extract_blocks, extract_json, RE_EXTRACT_STORY_BLOCK}}};
+use crate::{get_ai_chat, lib::{command_context::CommandContext, extract::{extract_blocks, extract_json, RE_EXTRACT_STORY_BLOCK}, game_info::GameInfo}};
 use crate::globals::*;
 
 
@@ -98,14 +98,7 @@ The players have provided the following additional information:
 ${extra_user_prompt}
 "#;
 
-pub async fn start_a_new_game(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
-    let context = CommandContext::new(sender, text, room);
-    if !context.handles_room().await {
-        return Ok(());
-    }
-
-    context.notify_typing().await;
-
+pub async fn start(context: CommandContext) -> Result<(), ()> {
     let player_members = context.all_player_room_members().await;
     let num_players = player_members.len();
     let player_names_str = player_members.clone().into_iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect::<Vec<String>>().join(", ");

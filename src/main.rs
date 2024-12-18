@@ -6,7 +6,7 @@ use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};
 
 use config::Config;
 use headjack::*;
-use lib::command_context::CommandContext;
+use lib::{bot_ext::BotExt, command_context::CommandContext};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::MessagesOptions,
@@ -25,6 +25,8 @@ mod lib {
     pub mod aichat;
     pub mod command_context;
     pub mod extract;
+    pub mod bot_ext;
+    pub mod game_info;
 }
 
 mod globals;
@@ -33,18 +35,14 @@ use globals::*;
 mod config;
 
 mod commands {
-    pub mod start_a_new_game;
-    pub mod dump_world;
+    pub mod start;
+    pub mod dump;
     pub mod act;
     pub mod monster_act;
+    pub mod help;
 }
 
-mod components {
-    pub mod game_info_container;
-}
-
-use commands::{act::act, dump_world::dump_world, start_a_new_game::start_a_new_game};
-
+use commands::{act::act, dump::dump, help::help, start::start};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
@@ -103,48 +101,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
 
     info!("The client is ready! Listening to new messages…");
 
+    bot.register_command(".help", help);
+    bot.register_command(".start", start);
+    bot.register_command(".act", act);
+    bot.register_command(".dump", dump);
+    //bot.register_command(".ask", dump_world);
 
-    bot.register_text_command(
-        "party",
-        "".to_string(),
-        "Party!".to_string(),
-        |sender, text, room| async move {
-            let context = CommandContext::new(sender, text, room);
-            if !context.handles_room().await {
-                return Ok(());
-            }
-
-            let content = RoomMessageEventContent::notice_plain(".🎉🎊🥳 let's PARTY!! 🥳🎊🎉");
-            context.room.send(content).await.unwrap();
-            Ok(())
-        },
-    )
-    .await;
-
-    bot.register_text_command(
-        "start",
-        "".to_string(),
-        "Start a new game".to_string(),
-        start_a_new_game,
-    )
-    .await;
-
-    bot.register_text_command(
-        "act",
-        "".to_string(),
-        "Perform some action".to_string(),
-        act,
-    )
-    .await;
-
-    bot.register_text_command(
-        "dump",
-        "".to_string(),
-        "Dump world".to_string(),
-        dump_world,
-    )
-    .await;
- 
     bot.register_text_command(
         "ask",
         "".to_string(),

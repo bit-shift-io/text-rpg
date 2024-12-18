@@ -55,6 +55,7 @@ Note that once you run docker-compose, the container will start and will be star
 ## TODO list
 
 * Reduce number of prompts (only monster action left to do).
+* Groq support - not giving correct responses.
 * Stop players who are dead from acting.
 * Clean up error handling - add an error and Result type
 * try not to clone game info all the time

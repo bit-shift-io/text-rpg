@@ -13,8 +13,10 @@ use serde::{de::{DeserializeOwned, IntoDeserializer}, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{commands::monster_act::monster_act, components::game_info_container::GameInfo, get_ai_chat, lib::extract::extract_json};
+use crate::{commands::monster_act::monster_act, get_ai_chat, lib::extract::extract_json};
 use crate::globals::*;
+
+use super::game_info::GameInfo;
 
 pub struct CommandContext {
     pub sender: OwnedUserId,
@@ -84,8 +86,8 @@ impl CommandContext {
         let game_info_option = mutex_guard.as_ref();
 
         if game_info_option.is_none() {
-            error!("No game in progress. Please run \"DM start\".");
-            self.room_send("No game in progress. Please run \"DM start\".").await?;
+            error!("No game in progress.");
+            self.room_send("No game in progress.").await?;
         }
 
         match game_info_option {

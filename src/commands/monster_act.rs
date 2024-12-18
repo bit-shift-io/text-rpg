@@ -1,5 +1,3 @@
-//use bevy_ecs::{entity::Entity, system::{Commands, Query, SystemState}};
-//use bevy_reflect::Reflect;
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -13,7 +11,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract::extract_json}};
+use crate::{get_ai_chat, lib::{command_context::CommandContext, extract::extract_json, game_info::GameInfo}};
 use crate::globals::*;
 
 const GAME_UPDATE_RAW_PROMPT: &str = r#"
@@ -66,12 +64,7 @@ Please include in your response exact values for things such as damage.
 "#;
 
 /// This is a private command. You can't call it directly. It is called from the act commend
-pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, previous_game_state: GameInfo, new_game_state: GameInfo, action_prompt: String, acting_player_member: &RoomMember) -> Result<(), ()> {
-    let context = CommandContext::new(sender, text, room);
-    if !context.handles_room().await {
-        return Ok(());
-    }
-
+pub async fn monster_act(context: CommandContext, previous_game_state: GameInfo, new_game_state: GameInfo, action_prompt: String, acting_player_member: &RoomMember) -> Result<(), ()> {
     context.notify_typing().await;
 
     let previous_game_state_str = serde_json::to_string_pretty(&previous_game_state).unwrap();
@@ -87,24 +80,7 @@ pub async fn monster_act(sender: OwnedUserId, text: String, room: MatrixRoom, pr
     let new_game_state_str = serde_json::to_string_pretty(&game_info).unwrap();
 
     // update the game state
-    let game_info_clone = context.clone_game_info().await?; /*{
-        // get the GameInfoContainer component from the world
-        let world_guard = GLOBAL_WORLD_2.lock().unwrap(); // Error cause by this line.
-        let mut world = world_guard;
-
-        // https://doc.qu1x.dev/bevy_trackball/bevy/ecs/system/struct.SystemState.html
-        // https://github.com/bevyengine/bevy/issues/2687
-        let mut state: SystemState<(
-            Commands,
-            Query<&mut GameInfoContainer>,
-        )> = SystemState::new(&mut world);
-
-        let (commands, mut game_info_container_query) = state.get_mut(&mut world);
-
-        let mut game_info_container = game_info_container_query.single_mut();
-        game_info_container.game_info = game_info;
-        game_info_container.game_info.clone()
-    };*/
+    let game_info_clone = context.clone_game_info().await?;
 
     // form a prompt to describe the monsters action as a story
     let act_story_prompt = ACT_STORY_RAW_PROMPT

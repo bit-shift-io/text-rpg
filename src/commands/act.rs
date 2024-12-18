@@ -11,7 +11,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{components::game_info_container::GameInfo, get_ai_chat, lib::{command_context::CommandContext, extract::{extract_blocks, extract_json, RE_EXTRACT_STORY_BLOCK}}};
+use crate::{get_ai_chat, lib::{command_context::CommandContext, extract::{extract_blocks, extract_json, RE_EXTRACT_STORY_BLOCK}, game_info::GameInfo}};
 use crate::globals::*;
 
 use super::monster_act::monster_act;
@@ -52,14 +52,7 @@ fn is_alive_monster_in_same_room_as_sender(game_info: &GameInfo, acting_player_m
     monster_in_same_room
 }
 
-pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<(), ()> {
-    let context = CommandContext::new(sender, text, room);
-    if !context.handles_room().await {
-        return Ok(());
-    }
-
-    context.notify_typing().await;
-
+pub async fn act(context: CommandContext) -> Result<(), ()> {
     let acting_player_member = context.sender_room_member().await?;
     
     let action_prompt = context.text
@@ -96,7 +89,7 @@ pub async fn act(sender: OwnedUserId, text: String, room: MatrixRoom) -> Result<
 
     let alive_monster_in_same_room_as_sender = is_alive_monster_in_same_room_as_sender(&new_game_info, &acting_player_member);
     if alive_monster_in_same_room_as_sender {
-        return monster_act(context.sender, context.text, context.room, old_game_info, new_game_info, action_prompt, &acting_player_member).await;
+        return monster_act(context, old_game_info, new_game_info, action_prompt, &acting_player_member).await;
     }
 
     Ok(())
