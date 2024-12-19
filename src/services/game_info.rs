@@ -77,6 +77,12 @@ pub struct PlayerCharacterInfo {
     pub wisdom: u32,
 }
 
+impl PlayerCharacterInfo {
+    pub fn is_alive(&self) -> bool {
+        self.health > 0
+    }
+}
+
 #[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
 pub struct ObjectiveInfo {
     pub goal: String,

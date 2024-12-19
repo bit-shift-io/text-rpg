@@ -14,7 +14,7 @@ use regex::Regex;
 use crate::get_ai_chat;
 use crate::globals::*;
 
-use super::game_info::GameInfo;
+use super::game_info::{GameInfo, PlayerCharacterInfo};
 
 pub struct CommandContext {
     pub command: String,
@@ -73,6 +73,16 @@ impl CommandContext {
         Ok(acting_player_member.clone())
     }
 
+    pub async fn find_room_member_player_character_info(&self, room_member: RoomMember) -> Option<PlayerCharacterInfo> {
+        let room_member_display_name = room_member.display_name().unwrap();//.to_string();
+
+        let r = self.with_game_info(|game_info| {
+            let f = game_info.player_characters.iter().find(|&player_character| player_character.name.eq(&room_member_display_name));
+            Ok(f.unwrap().clone())
+        }).await.unwrap();
+        Some(r)
+    }
+
     pub async fn all_player_room_members(&self) -> Vec<RoomMember> {
         let joined_members = self.room.members(RoomMemberships::JOIN).await.unwrap();
         let player_members: Vec<RoomMember> = joined_members.into_iter().filter(|member| !member.is_account_user()).collect();
@@ -102,6 +112,12 @@ impl CommandContext {
             Some(game_info) => callback(game_info),
             None => Err(())
         }
+    }
+
+    pub async fn game_info_as_json(&self) -> Result<String, ()> {
+        self.with_game_info(|game_info| {
+            game_info.to_json_string()
+        }).await
     }
 
     pub async fn execute_prompt(&self, prompt: String) -> Result<String, ()> {

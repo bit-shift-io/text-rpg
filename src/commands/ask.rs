@@ -22,12 +22,8 @@ ${question}.
 pub async fn ask(context: CommandContext) -> Result<(), ()> {
     let acting_player_member = context.sender_room_member().await?;
 
-    let game_info_json: String = context.with_game_info(|game_info| {
-        game_info.to_json_string()
-    }).await?;
-
     let act_prompt = ASK_PROMPT
-        .replace("${game_state}", &game_info_json)
+        .replace("${game_state}", &context.game_info_as_json().await?)
         .replace("${question}", &context.clean_text())
         .replace("${name}", acting_player_member.display_name().unwrap());
 

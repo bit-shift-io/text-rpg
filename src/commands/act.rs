@@ -46,16 +46,18 @@ If any monsters performs an action after the player, then include the following 
 - Include exact values for things such as damage.
 "#;
 pub async fn act(context: CommandContext) -> Result<(), ()> {
-    let acting_player_member = context.sender_room_member().await?;
-
-    let old_game_info_json: String = context.with_game_info(|game_info| {
-        game_info.to_json_string()
-    }).await?;
+    let sender_player_member = context.sender_room_member().await?;
+    let sender_display_name = sender_player_member.display_name().unwrap().to_owned();
+    let sender_player_info = context.find_room_member_player_character_info(sender_player_member).await.unwrap();
+    if !sender_player_info.is_alive() {
+        context.room_send(&format!("🪦 {}", &sender_display_name)).await.unwrap();
+        return Ok(());
+    }
 
     let act_prompt = ACT_PROMPT
-        .replace("${game_state}", &old_game_info_json)
+        .replace("${game_state}", &context.game_info_as_json().await?)
         .replace("${action}", &context.clean_text())
-        .replace("${name}", acting_player_member.display_name().unwrap());
+        .replace("${name}", &sender_display_name);
 
     let act_response = context.execute_prompt(act_prompt).await?;
 
