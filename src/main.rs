@@ -26,7 +26,7 @@ mod config;
 mod commands;
 
 use globals::*;
-use commands::{act::act, dump::dump, help::help, start::start};
+use commands::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
@@ -58,8 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     config.aichat_config_file = aichat_config_file;
     
     *GLOBAL_CONFIG.lock().await = Some(config.clone());
-    info!("config: {}", config);
-
+    info!("[main] config: {}", config);
 
     // see example usage here on how to load from config: https://github.com/arcuru/chaz/blob/main/src/main.rs
     let bot_config = BotConfig {
@@ -81,7 +80,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         return Err(e.into()); // Return the error
     }
 
-
     // React to invites.
     // We set this up before the initial sync so that we join rooms
     // even if they were invited before the bot was started.
@@ -92,49 +90,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         info!("Error syncing: {e}");
     }
 
-    bot.register_command(".help", help);
-    bot.register_command(".start", start);
-    bot.register_command(".act", act);
-    bot.register_command(".dump", dump);
-    //bot.register_command(".ask", dump_world);
-
-    bot.register_text_command(
-        "ask",
-        "".to_string(),
-        "Ask a question".to_string(),
-        |sender, body, room| async move {
-
-            // Skip over the command, which is "!chaz ask"
-            let input = body
-                .split_whitespace()
-                .skip(1)
-                .collect::<Vec<&str>>()
-                .join(" ");
-
-            info!(
-                "Request: {} - {}",
-                sender.as_str(),
-                input.replace('\n', " ")
-            );
-            if let Ok(result) = get_ai_chat().await.execute(&None, input.to_string(), Vec::new()) {
-                // Add the prefix ".response:\n" to the result
-                // That way we can identify our own responses and ignore them for context
-                info!(
-                    "Response: {} - {}",
-                    sender.as_str(),
-                    result.replace('\n', " ")
-                );
-                let content = RoomMessageEventContent::notice_plain(result);
-
-                room.send(content).await.unwrap();
-            }
-
-            Ok(())
-        },
-    )
-    .await;
-
-
+    bot.register_command(".help", help::help);
+    bot.register_command(".start", start::start);
+    bot.register_command(".act", act::act);
+    bot.register_command(".ask", ask::ask);
+    bot.register_command(".dump", dump::dump);
+    
     // Run the bot, this should never return except on error
     if let Err(e) = bot.run().await {
         error!("Error running bot: {e}");

@@ -47,17 +47,14 @@ If any monsters performs an action after the player, then include the following 
 "#;
 pub async fn act(context: CommandContext) -> Result<(), ()> {
     let acting_player_member = context.sender_room_member().await?;
-    
-    let action_prompt = context.text
-        .replace(".act", "")
-        .replace("verbose", "");
-  
-    let old_game_info = context.clone_game_info().await?;
-    let old_game_info_json = serde_json::to_string_pretty(&old_game_info).unwrap();
+
+    let old_game_info_json: String = context.with_game_info(|game_info| {
+        game_info.to_json_string()
+    }).await?;
 
     let act_prompt = ACT_PROMPT
         .replace("${game_state}", &old_game_info_json)
-        .replace("${action}", &action_prompt)
+        .replace("${action}", &context.clean_text())
         .replace("${name}", acting_player_member.display_name().unwrap());
 
     let act_response = context.execute_prompt(act_prompt).await?;

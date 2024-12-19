@@ -21,6 +21,13 @@ impl GameInfo {
             }
         }
     }
+
+    pub fn to_json_string(&self) -> Result<String, ()> {
+        match serde_json::to_string_pretty(self) {
+            Ok(json) => Ok(json),
+            Err(e) => Err(())
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]

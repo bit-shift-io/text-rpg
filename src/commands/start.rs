@@ -97,18 +97,11 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
     let player_members = context.all_player_room_members().await;
     let num_players = player_members.len();
     let player_names_str = player_members.clone().into_iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect::<Vec<String>>().join(", ");
-    
-    // any text left over should be feed to the gmae info prompt to let the user modify the game
-    // for example, they might want to assign certain character classes to certain players or setup a theme for the 
-    // game
-    let extra_user_prompt = context.text
-        .replace(".start", "")
-        .replace("verbose", "");
 
     let start_prompt = START_PROMPT
         .replace("${num_players}", &num_players.to_string())
         .replace("${player_names}", &player_names_str.to_string())
-        .replace("${extra_user_prompt}", &extra_user_prompt.to_string());
+        .replace("${extra_user_prompt}", &context.clean_text());
     let start_response = context.execute_prompt(start_prompt).await?;
 
     let json_strs = extract_between("<json>", "</json>", &start_response)?;

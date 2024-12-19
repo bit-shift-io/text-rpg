@@ -17,6 +17,7 @@ use crate::globals::*;
 use super::game_info::GameInfo;
 
 pub struct CommandContext {
+    pub command: String,
     pub sender: OwnedUserId,
     pub text: String,
     pub room: MatrixRoom,
@@ -24,14 +25,24 @@ pub struct CommandContext {
 }
 
 impl CommandContext {
-    pub fn new(sender: OwnedUserId, text: String, room: MatrixRoom) -> Self {
+    pub fn new(command: String, sender: OwnedUserId, text: String, room: MatrixRoom) -> Self {
         let verbose = text.contains("verbose");
         Self {
+            command,
             sender,
             text,
             room,
             verbose
         }
+    }
+
+    /// Text with any command + special arguments removed
+    pub fn clean_text(&self) -> String {
+        self.text
+            .replace(&self.command, "")
+            .replace("verbose", "")
+            .trim()
+            .to_string()
     }
 
     // Are we allowed to respond to this command?
@@ -78,8 +89,7 @@ impl CommandContext {
         }
     }
 
-    // todo: make a version the returns a ref.
-    pub async fn clone_game_info(&self) -> Result<GameInfo, ()> {
+    pub async fn with_game_info<T>(&self, callback: impl FnOnce(&GameInfo) -> Result<T, ()>) -> Result<T, ()> {
         let mutex_guard = GLOBAL_GAME_INFO.lock().await;
         let game_info_option = mutex_guard.as_ref();
 
@@ -89,7 +99,7 @@ impl CommandContext {
         }
 
         match game_info_option {
-            Some(game_info) => Ok(game_info.clone()),
+            Some(game_info) => callback(game_info),
             None => Err(())
         }
     }
