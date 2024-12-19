@@ -128,9 +128,11 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
 
     context.room_send(&story_strs[0]).await.unwrap();
 
+    /*
     // try to generate an image for the story
     let url = get_url_for_prompt(&story_strs[0]).await?;
     context.room_send(&url).await.unwrap();
+    */
 
     Ok(())
 }

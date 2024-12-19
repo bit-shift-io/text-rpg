@@ -11,6 +11,7 @@ curl \
 */
 
 use std::collections::HashMap;
+use reqwest::header::CONTENT_TYPE;
 use tracing::{error, info, warn};
 
 use crate::GLOBAL_CONFIG;
@@ -36,8 +37,9 @@ pub async fn get_url_for_prompt(prompt: &str) -> Result<String, ()> {
         }
     };
 
-    let res = match client.post("http://httpbin.org/post")
+    let res = match client.post("https://api.getimg.ai/v1/essential-v2/text-to-image")
         .bearer_auth(config.getimgai_api_key.unwrap())
+        .header(CONTENT_TYPE, "application/json")
         .body(body_str)
         .send()
         .await {
