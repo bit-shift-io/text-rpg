@@ -50,6 +50,7 @@ impl BotExt for Bot {
                     return;
                 }
 
+                info!("[register_command] Execute command: {:?}, sender: {:?}, text: {:?}.", command, event.sender.as_str(), body.to_string());
                 context.notify_typing().await;
 
                 if let Err(e) = callback(context).await {

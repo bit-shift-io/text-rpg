@@ -6,8 +6,6 @@ use regex::Regex;
 use crate::{get_ai_chat, services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo}};
 use crate::globals::*;
 
-//use super::monster_act::monster_act;
-
 
 const ACT_PROMPT: &str = r#"
 I am a dungeon master. I need you to take the current state of the game and update it to reflect a players action.
@@ -47,18 +45,6 @@ If any monsters performs an action after the player, then include the following 
 - Describe the monsters action.
 - Include exact values for things such as damage.
 "#;
-
-/* 
-fn is_alive_monster_in_same_room_as_sender(game_info: &GameInfo, acting_player_member: &RoomMember) -> bool {
-    let name = acting_player_member.display_name().unwrap();
-    let player_character = game_info.player_characters.iter().find(|character| character.name == name).unwrap();
-    let room_number = player_character.room_number;
-    let room = game_info.rooms.iter().find(|room| room.room_number == room_number).unwrap();
-    let monster_in_same_room = room.monsters.len() > 0;
-    // todo: check any monsters are alive
-    monster_in_same_room
-}*/
-
 pub async fn act(context: CommandContext) -> Result<(), ()> {
     let acting_player_member = context.sender_room_member().await?;
     
@@ -99,12 +85,5 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
     *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
 
     context.room_send(&story_strs[0]).await.unwrap();
-
-    /*
-    let alive_monster_in_same_room_as_sender = is_alive_monster_in_same_room_as_sender(&new_game_info, &acting_player_member);
-    if alive_monster_in_same_room_as_sender {
-        return monster_act(context, old_game_info, new_game_info, action_prompt, &acting_player_member).await;
-    }
-    */
     Ok(())
 }

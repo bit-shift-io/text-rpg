@@ -1,5 +1,3 @@
-//use bevy_ecs::{entity::Entity, system::{Commands, Query, SystemState}};
-//use bevy_reflect::Reflect;
 use tracing::{error, info};
 use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
@@ -98,11 +96,10 @@ impl CommandContext {
 
     pub async fn execute_prompt(&self, prompt: String) -> Result<String, ()> {
         self.notify_typing().await;
-
+        info!("[execute_prompt] prompt: {}", prompt);
         let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
         match r {
             Ok(result) => {
-                self.notify_typing().await;
                 info!("[execute_prompt] result: {}", result);
                 Ok(result)
             },
@@ -113,67 +110,4 @@ impl CommandContext {
             }
         }
     }
-/* 
-    pub async fn execute_story_prompt(&self, prompt: String) -> Result<String, ()> {
-        self.notify_typing().await;
-
-        let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
-        match r {
-            Ok(result) => {
-                self.notify_typing().await;
-
-                info!( "[execute_story_prompt] result: {}", result);
-                self.room.send(RoomMessageEventContent::notice_plain(result.clone())).await.unwrap();
-
-                Ok(result)
-            },
-            Err(e) => {
-                error!("[execute_story_prompt] Failed to execute prompt: {}", e);
-                self.room.send(RoomMessageEventContent::notice_plain(format!("[execute_story_prompt] Failed to execute prompt: {}", e))).await.unwrap();
-                Err(())
-            }
-        }
-    }
-
-    pub async fn execute_json_prompt<T: DeserializeOwned + Clone>(&self, prompt: String) -> Result<T, ()> {
-        self.notify_typing().await;
-
-        let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
-        match r {
-            Ok(result) => {
-                self.notify_typing().await;
-
-                info!( "[execute_json_prompt] result: {}", result);
-
-                if self.verbose {
-                    self.room.send(RoomMessageEventContent::notice_plain(result.clone())).await.unwrap();
-                }
-                
-                let json_strs = extract_json(&result)?;
-                if json_strs.len() == 0 {
-                    self.room.send(RoomMessageEventContent::notice_plain("[execute_json_prompt] Failed to get JSON from response.")).await.unwrap();
-                }
-
-                let owned_string = json_strs[0].to_string(); // Create an owned copy
-                let r = match serde_json::from_str::<T>(&owned_string) {
-                    Ok(obj) => {
-                        let c = obj.clone();
-                        Ok(c)
-                    },
-                    Err(err) => {
-                        error!("Error parsing json: {err}");
-                        self.room.send(RoomMessageEventContent::notice_plain("[execute_json_prompt] Failed to parse the map info.")).await.unwrap();
-                        //Err("Failed to execute AI chat.".to_string())
-                        Err(())
-                    }
-                };
-                r
-            },
-            Err(e) => {
-                error!("[execute_json_prompt] Failed to execute prompt: {}", e);
-                self.room.send(RoomMessageEventContent::notice_plain(format!("[execute_json_prompt] Failed to execute prompt: {}", e))).await.unwrap();
-                Err(())
-            }
-        }
-    }*/
 }

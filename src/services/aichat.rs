@@ -87,7 +87,7 @@ impl AiChat {
             }
         }
         command.arg("--").arg(prompt);
-        info!("Running command: {:?}", command);
+        //info!("Running command: {:?}", command);
 
         //let output = command.output().expect("Failed to execute command");
         let output = match command.output() {
@@ -97,7 +97,7 @@ impl AiChat {
             },
         };
 
-        info!("Output: {:?}", output);
+        //info!("Output: {:?}", output);
 
         // return the output as a string
         if output.stdout.is_empty() {

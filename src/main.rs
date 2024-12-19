@@ -17,7 +17,8 @@ use matrix_sdk::{
     Room, RoomMemberships,
 };
 use serde::Deserialize;
-use tracing::{error, info};
+use tracing::{error, info, level_filters::LevelFilter};
+use tracing_subscriber::filter::EnvFilter;
 
 mod services;
 mod globals;
@@ -29,7 +30,16 @@ use commands::{act::act, dump::dump, help::help, start::start};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
-    tracing_subscriber::fmt::init();
+    // Setup tracing to only show messages from our crate.
+    // https://stackoverflow.com/questions/73247589/how-to-turn-off-tracing-events-emitted-by-other-crates
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::OFF.into())
+        .from_env()?
+        .add_directive("text_rpg=info".parse()?);
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .compact()
+        .init();
 
     // first try to read from the docker config location, else fallback to the local dev version
     // also assume if we are in docker, then the aichat_config_file can also automatically be configured.
@@ -81,8 +91,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     if let Err(e) = bot.sync().await {
         info!("Error syncing: {e}");
     }
-
-    info!("The client is ready! Listening to new messages…");
 
     bot.register_command(".help", help);
     bot.register_command(".start", start);

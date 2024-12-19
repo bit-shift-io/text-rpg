@@ -14,9 +14,6 @@ use tokio::sync::Mutex;
 /// Holds the config for the bot
 pub static GLOBAL_CONFIG: LazyLock<Mutex<Option<Config>>> = LazyLock::new(|| { Mutex::new(None) });
 
-/// Count of the global messages per user
-pub static GLOBAL_MESSAGES: LazyLock<Mutex<HashMap<String, u64>>> = LazyLock::new(|| { Mutex::new(HashMap::new()) } );
-
 // Holds the current game info
 pub static GLOBAL_GAME_INFO: LazyLock<Mutex<Option<GameInfo>>> = LazyLock::new(|| { Mutex::new(None) });
 

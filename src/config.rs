@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::{fmt};
+use std::fmt;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
