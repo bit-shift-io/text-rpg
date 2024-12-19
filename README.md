@@ -54,6 +54,7 @@ Note that once you run docker-compose, the container will start and will be star
 
 ## TODO list
 
+* Some end game story prompt for when all objectives are met
 * Ensure players can't 'invent stuff'
 * Stop players who are dead from acting.
 * Clean up error handling - add an error and Result type
