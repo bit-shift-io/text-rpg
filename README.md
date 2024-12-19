@@ -57,4 +57,4 @@ Note that once you run docker-compose, the container will start and will be star
 * Ensure players can't 'invent stuff'
 * Stop players who are dead from acting.
 * Clean up error handling - add an error and Result type
-* AI image generation.
+* AI image generation (https://dashboard.getimg.ai/api-keys)

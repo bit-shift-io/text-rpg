@@ -19,6 +19,7 @@ regex = "1.10.6"
 serde_json_diff = "0.2.0"
 serde-diff = "0.4.1"
 json-strip-comments = "1.0.4"
+reqwest = "0.12.9"
 #serde-xml-rs = "0.6.0"
 
 #[build]

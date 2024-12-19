@@ -2,7 +2,7 @@ use tracing::{error, info};
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{get_ai_chat, services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo}};
+use crate::{get_ai_chat, services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo, getimgai::get_url_for_prompt}};
 use crate::globals::*;
 
 
@@ -127,5 +127,10 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
     *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
 
     context.room_send(&story_strs[0]).await.unwrap();
+
+    // try to generate an image for the story
+    let url = get_url_for_prompt(&story_strs[0]).await?;
+    context.room_send(&url).await.unwrap();
+
     Ok(())
 }

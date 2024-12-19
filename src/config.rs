@@ -7,6 +7,7 @@ pub struct Config {
     pub password: String,
     pub rooms: Option<Vec<String>>,
     pub aichat_config_file: Option<String>,
+    pub getimgai_api_key: Option<String>,
 }
 
 impl fmt::Display for Config {

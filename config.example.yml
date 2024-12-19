@@ -4,3 +4,4 @@ password: "XXX"
 rooms:
   - "XXX"
   - "XXX"
+getimgai_api_key: "XXX" // https://dashboard.getimg.ai/api-keys
