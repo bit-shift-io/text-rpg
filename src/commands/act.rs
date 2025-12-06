@@ -61,22 +61,86 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
         return Ok(());
     }
 
+    // --- Round Logic Start ---
+    let mut round_reset = false;
+    let mut current_round_number = 0;
+    
+    {
+        let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
+        if let Some(round_info) = round_info_guard.as_mut() {
+            current_round_number = round_info.round_number;
+            let has_acted = round_info.acted_players.contains(&sender_display_name);
+            let elapsed = round_info.round_start_time.elapsed().unwrap_or(std::time::Duration::ZERO);
+            // 6 hours timeout
+            let timeout = elapsed.as_secs() > 6 * 60 * 60;
+
+            if has_acted {
+                if timeout {
+                    // Timeout passed: Start new round logic checks
+                    round_info.round_number += 1;
+                    round_info.acted_players.clear();
+                    round_info.round_start_time = std::time::SystemTime::now();
+                    round_reset = true;
+                    // Proceed to accept action (we will add user to acted_players below)
+                    current_round_number = round_info.round_number;
+                } else {
+                    context.room_send(&format!("You have already acted in round {}. Please wait for others or a timeout (6h).", round_info.round_number)).await.unwrap();
+                    return Ok(());
+                }
+            }
+
+            // Optimistically mark as acted
+            round_info.acted_players.push(sender_display_name.clone());
+        }
+    }
+
+    if round_reset {
+        context.room_send(&format!("Round timeout! Round {} started.", current_round_number)).await.unwrap();
+    }
+    // --- Round Logic End ---
+
     let act_prompt = ACT_PROMPT
         .replace("${game_state}", &context.game_info_as_json().await?)
         .replace("${action}", &context.clean_text())
         .replace("${name}", &sender_display_name);
 
-    let act_response = context.execute_prompt(act_prompt).await?;
+    let act_response = match context.execute_prompt(act_prompt).await {
+        Ok(res) => res,
+        Err(_) => {
+             // Revert turn on failure
+             let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
+             if let Some(round_info) = round_info_guard.as_mut() {
+                 if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
+                     round_info.acted_players.remove(pos);
+                 }
+             }
+             return Err(());
+        }
+    };
 
     let json_strs = extract_between("<json>", "</json>", &act_response)?;
     if json_strs.len() == 0 {
         context.room_send("[act] Failed to get JSON from response.").await.unwrap();
+        // Revert turn
+        let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
+        if let Some(round_info) = round_info_guard.as_mut() {
+             if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
+                 round_info.acted_players.remove(pos);
+             }
+        }
         return Ok(());
     }
 
     let story_strs = extract_between("<story>", "</story>", &act_response)?;
     if story_strs.len() == 0 {
         context.room_send("[act] Failed to get story block from response.").await.unwrap();
+        // Revert turn
+        let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
+        if let Some(round_info) = round_info_guard.as_mut() {
+             if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
+                 round_info.acted_players.remove(pos);
+             }
+        }
         return Ok(());
     }
 
@@ -85,11 +149,36 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
         Err(e) => {
             error!("Failed to parse JSON: {}", &json_strs[0]);
             context.room_send("Failed to parse JSON.").await.unwrap();
+            // Revert turn
+            let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
+            if let Some(round_info) = round_info_guard.as_mut() {
+                 if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
+                     round_info.acted_players.remove(pos);
+                 }
+            }
             return Ok(());
         }
     };
+    
+    // Check for round completion based on NEW game info (in case someone died)
+    let total_alive_players = new_game_info.player_characters.iter().filter(|p| p.is_alive()).count();
+    
     *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
 
     context.room_send(&story_strs[0]).await.unwrap();
+
+    // --- Check End of Round ---
+    {
+        let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
+        if let Some(round_info) = round_info_guard.as_mut() {
+             if round_info.acted_players.len() >= total_alive_players {
+                  round_info.round_number += 1;
+                  round_info.acted_players.clear();
+                  round_info.round_start_time = std::time::SystemTime::now();
+                  context.room_send(&format!("All players acted! Round {} started.", round_info.round_number)).await.unwrap();
+             }
+        }
+    }
+
     Ok(())
 }

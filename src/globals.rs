@@ -23,3 +23,12 @@ pub async fn get_ai_chat() -> AiChat {
     let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
     AiChat::new("aichat".to_string(), config.aichat_config_file) //Some("/Users/fabian/Library/Application Support/aichat/".to_owned())) //config.aichat_config_dir.clone())
 }
+
+#[derive(Clone, Debug)]
+pub struct RoundInfo {
+    pub round_number: u32,
+    pub acted_players: Vec<String>,
+    pub round_start_time: std::time::SystemTime,
+}
+
+pub static GLOBAL_ROUND_INFO: LazyLock<Mutex<Option<RoundInfo>>> = LazyLock::new(|| { Mutex::new(None) });
