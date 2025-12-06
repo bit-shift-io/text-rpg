@@ -74,8 +74,8 @@ Here is the schema I need the JSON wrapped in XML tags:
 
 I also need a seperate story placed between an opening xml tag <story> and the closing xml tag </story>.
 
-This story must include:
-- A story which describes the objectives
+This succinct story must include:
+- A short story which describes the objectives
 - Each player and their backstory
 - The starting room and any monsters in that room
 

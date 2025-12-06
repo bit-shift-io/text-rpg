@@ -170,18 +170,18 @@ Do not prompt for further instructions, if you are unsure make your best guess.
 I also need a seperate story placed between an opening xml tag <story> and the closing xml tag </story>.
 
 In the story I need you to:
-- Describe for me the players action as a story.
-- Describe the consequences of the players actions, which should align with the changes you make to the JSON.
+- Briefly describe for me the players action as a short, succinct story. Keep it to 2-3 sentences.
+- Briefly describe the consequences of the players actions.
 - Include exact values for things such as damage.
 
 If the user is looking around, investigating or examining the room or area, then include the following in the story:
-- Describe the room they are in.
+- Concisely describe the room they are in, avoiding excessive detail.
 - Describe the entrances/exits to the room they are in that are not hidden (unless the player is specifically searching for hidden enterances).
 - Describe any items in the room they are in that are not hidden (unless the player is specifically searching for hidden items).
 - Describe any monsters in the room they are in that are not hidden (unless the player is specifically searching for hidden monsters).
 
 If the player moves to another room, then include the following in the story:
-- Describe the new room.
+- Concisely describe the new room.
 - Describe monsters in the new room.
 
 If any monsters performs an action after the player, then include the following in the story:
