@@ -29,28 +29,28 @@ The format must be the same as the current game state, do not add additional fie
 Do not prompt for further instructions, if you are unsure make your best guess.
 </rules>
 
-I also need a seperate story placed between an opening xml tag <story> and the closing xml tag </story>.
+I also need a seperate short story placed between an opening xml tag <story> and the closing xml tag </story>.
 
 In the story I need you to:
-- Describe for me change in JSON game state as a story.
+- Briefly describe for me change in JSON game state as a short, succinct story.
 - Include exact values for things such as damage.
 
 If the user is looking around, investigating or examining the room or area then include the following in the story:
-- Describe the room they are in.
-- Describe the entrances/exits to the room they are in that are not hidden (unless the player is specifically searching for hidden enterances).
-- Describe any items in the room they are in that are not hidden (unless the player is specifically searching for hidden items).
-- Describe any monsters in the room they are in that are not hidden (unless the player is specifically searching for hidden monsters).
+- Concisely describe the room they are in, avoiding excessive detail.
+- Concisely describe the entrances/exits to the room they are in that are not hidden (unless the player is specifically searching for hidden enterances).
+- Concisely describe any items in the room they are in that are not hidden (unless the player is specifically searching for hidden items).
+- Concisely describe any monsters in the room they are in that are not hidden (unless the player is specifically searching for hidden monsters).
 
 If the player moves to another room then include the following in the story:
-- Describe the new room.
-- Describe monsters in the new room.
+- Concisely describe the new room.
+- Concisely describe monsters in the new room.
 
 If any monsters performs an action after the player then include the following in the story:
-- Describe the monsters action.
+- Briefly describe the monsters action.
 - Include exact values for things such as damage.
 
-If an objective has been met as a result of the action then include the followig elements in the story:
-- Describe the objective met.
+If an objective has been met as a result of the action then include the following elements in the story:
+- Concisely describe the objective met.
 "#;
 pub async fn act(context: CommandContext) -> Result<(), ()> {
     let sender_player_member = context.sender_room_member().await?;
