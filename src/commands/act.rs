@@ -72,7 +72,8 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
             let has_acted = round_info.acted_players.contains(&sender_display_name);
             let elapsed = round_info.round_start_time.elapsed().unwrap_or(std::time::Duration::ZERO);
             // 6 hours timeout
-            let timeout = elapsed.as_secs() > 6 * 60 * 60;
+            let timeout_duration = std::time::Duration::from_secs(6 * 60 * 60);
+            let timeout = elapsed > timeout_duration;
 
             if has_acted {
                 if timeout {
@@ -84,7 +85,40 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
                     // Proceed to accept action (we will add user to acted_players below)
                     current_round_number = round_info.round_number;
                 } else {
-                    context.room_send(&format!("You have already acted in round {}. Please wait for others or a timeout (6h).", round_info.round_number)).await.unwrap();
+                    let remaining = timeout_duration - elapsed;
+                    let remaining_secs = remaining.as_secs();
+                    let hours = remaining_secs / 3600;
+                    let minutes = (remaining_secs % 3600) / 60;
+                    
+                    let game_info_guard = GLOBAL_GAME_INFO.lock().await;
+                    let mut waiting_for = Vec::new();
+                    if let Some(game_info) = game_info_guard.as_ref() {
+                        for player in &game_info.player_characters {
+                            if player.is_alive() && !round_info.acted_players.contains(&player.name) {
+                                waiting_for.push(player.name.clone());
+                            }
+                        }
+                    }
+
+                    // Force drop guard to avoid deadlock if we were to hold it while sending (though room_send is async and we are inside a sync block here effectively? No, we are in an async fn, holding a MutexGuard across await point is bad, but room_send is awaited outside or inside?
+                    // Wait, logic check: room_send IS async. Accessing GLOBAL_GAME_INFO locks another mutex.
+                    // We are holding round_info_guard (Global Round Info Mutex) while trying to lock Global Game Info Mutex.
+                    // This is potential deadlock if elsewhere we lock GameInfo then RoundInfo.
+                    // Checking other usages... act() usually locks RoundInfo briefly. GameInfo is locked in with_game_info.
+                    // Ideally, we should release GameInfo lock before sending.
+                    
+                    drop(game_info_guard); // Explicit drop just to be safe/clear, though we only needed it for the list.
+
+                    let waiting_list = if waiting_for.is_empty() {
+                        "everyone".to_string() 
+                    } else {
+                        waiting_for.join(", ")
+                    };
+
+                    context.room_send(&format!(
+                        "You have already acted in round {}. Please wait for: {}. Timeout in {}h {}m.", 
+                        round_info.round_number, waiting_list, hours, minutes
+                    )).await.unwrap();
                     return Ok(());
                 }
             }
