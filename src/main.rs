@@ -25,6 +25,8 @@ mod globals;
 mod config;
 mod commands;
 mod themes;
+pub mod llm_config;
+pub mod llm_client;
 
 use globals::*;
 use commands::*;
@@ -96,6 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     bot.register_command(".act", act::act);
     bot.register_command(".ask", ask::ask);
     bot.register_command(".dump", dump::dump);
+    bot.register_command(".llm", llm_test::llm_test);
     
     // Run the bot, this should never return except on error
     if let Err(e) = bot.run().await {
