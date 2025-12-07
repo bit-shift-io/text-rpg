@@ -10,6 +10,8 @@ pub struct GameInfo {
     pub objectives: Vec<ObjectiveInfo>,
     #[serde(default)]
     pub theme: String,
+    #[serde(default)]
+    pub theme_description: String,
 }
 
 impl GameInfo {
