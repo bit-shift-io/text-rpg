@@ -24,6 +24,7 @@ mod services;
 mod globals;
 mod config;
 mod commands;
+mod themes;
 
 use globals::*;
 use commands::*;

@@ -8,6 +8,8 @@ pub struct GameInfo {
     pub room_connections: Vec<RoomConnectionInfo>,
     pub player_characters: Vec<PlayerCharacterInfo>,
     pub objectives: Vec<ObjectiveInfo>,
+    #[serde(default)]
+    pub theme: String,
 }
 
 impl GameInfo {

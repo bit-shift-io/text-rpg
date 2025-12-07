@@ -8,11 +8,14 @@ use crate::globals::*;
 
 const START_PROMPT: &str = r#"
 I am a dungeon master. I need to create a setup for a new dungeons and dragons role playing game.
+The theme of the game is: ${theme_name}.
+${theme_description}
 
 I need you to return a JSON object placed between the opening XML tag <json> and the closing xml tag </json>.
 Here is the schema I need the JSON wrapped in XML tags:
 <json>
 {
+    "theme": "${theme_name}",
     "rooms": [
         // An array containing objects with following structure:
         {
@@ -55,7 +58,7 @@ Here is the schema I need the JSON wrapped in XML tags:
         // The player objects have the following structure:
         {
             "name": {The player name to assign this character too},
-            "character_class": {The character class},
+            "character_class": {The character class, chosen from: ${character_classes}},
             "abilities": [A comma separated list of special abilties the character has],
             "items": [A comma separated list of items the character has],
             "room_number": {The room number, must be the same as the room that has "is_start_room" set to true},
@@ -98,9 +101,15 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
     let num_players = player_members.len();
     let player_names_str = player_members.clone().into_iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect::<Vec<String>>().join(", ");
 
+    let theme = crate::themes::get_random_theme();
+    info!("Starting game with theme: {}", theme.name);
+
     let start_prompt = START_PROMPT
         .replace("${num_players}", &num_players.to_string())
         .replace("${player_names}", &player_names_str.to_string())
+        .replace("${theme_name}", theme.name)
+        .replace("${theme_description}", theme.description)
+        .replace("${character_classes}", &theme.classes.join(", "))
         .replace("${extra_user_prompt}", &context.clean_text());
     let start_response = context.execute_prompt(start_prompt).await?;
 
@@ -134,6 +143,7 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
         acted_players: Vec::new(),
         round_start_time: std::time::SystemTime::now(),
     });
+    context.room_send(&format!("Round {} started.", 1)).await.unwrap();
 
     /*
     // try to generate an image for the story
