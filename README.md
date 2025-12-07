@@ -1,10 +1,5 @@
 # Text RPG
 
-Install AIChat: https://github.com/sigoden/aichat
-
-brew install aichat
-
-Kalosm - Rust LLM framework - https://floneum.com/kalosm/docs/
 Headjack - Rust Matrix wrapped - https://docs.rs/headjack/0.4.0/headjack/index.html
 
 ## Install
@@ -36,8 +31,6 @@ For more info refer to: https://dev.to/rogertorres/first-steps-with-docker-rust-
 Build the docker image first.
 
 Copy ```config.yml``` into ```~/Docker/text-rpg```.
-
-Copy your aichat config (More info here: ```https://github.com/sigoden/aichat/wiki/Configuration-Guide```) into ```~/Docker/text-rpg``` and call it ```aichat.config.yml``.
 
 ```docker-compose -f compose.yml up --build```.
 

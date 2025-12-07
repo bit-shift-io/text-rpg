@@ -25,7 +25,6 @@ mod globals;
 mod config;
 mod commands;
 mod themes;
-pub mod llm_config;
 pub mod llm_client;
 
 use globals::*;
@@ -45,20 +44,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         .init();
 
     // first try to read from the docker config location, else fallback to the local dev version
-    // also assume if we are in docker, then the aichat_config_file can also automatically be configured.
-    let mut aichat_config_file: Option<String> = None;
     let file_contents = match fs::read_to_string("/data/config.yml") {
         Ok(contents) => {
-            aichat_config_file = Some("/data/aichat.config.yml".to_string());
             contents
         },
         Err(e) => {
             fs::read_to_string("config.yml").expect("Unable to read config.yml")
         }
     };
-
-    let mut config: Config = serde_yml::from_str(&file_contents).unwrap();
-    config.aichat_config_file = aichat_config_file;
+    let config: Config = serde_yml::from_str(&file_contents).unwrap();
     
     *GLOBAL_CONFIG.lock().await = Some(config.clone());
     info!("[main] config: {}", config);

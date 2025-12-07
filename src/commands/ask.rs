@@ -3,7 +3,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{get_ai_chat, services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo}};
+use crate::{services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo}};
 use crate::globals::*;
 
 

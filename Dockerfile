@@ -3,10 +3,6 @@
 # Rust nightly as the base image
 FROM rustlang/rust:nightly AS build
 
-# Build aichat
-RUN git clone https://github.com/sigoden/aichat.git
-RUN cd aichat && cargo build --release && cd ..
-
 # Create a new empty shell project
 RUN USER=root cargo new --bin text-rpg
 WORKDIR /text-rpg
@@ -33,7 +29,6 @@ RUN apt-get update && apt-get -y install sqlite3 openssl ca-certificates
 
 # Copy from the previous build
 COPY --from=build /text-rpg/target/release/text-rpg /usr/src/text-rpg
-COPY --from=build /aichat/target/release/aichat /usr/src/aichat
 
 ENV PATH="/usr/src/:$PATH"
 

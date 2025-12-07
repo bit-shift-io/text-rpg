@@ -2,7 +2,7 @@ use tracing::{error, info};
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{get_ai_chat, services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo, getimgai::get_url_for_prompt}};
+use crate::{services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo, getimgai::get_url_for_prompt}};
 use crate::globals::*;
 
 

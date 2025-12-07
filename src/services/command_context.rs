@@ -11,7 +11,7 @@ use serde::{de::{DeserializeOwned, IntoDeserializer}, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::get_ai_chat;
+use crate::{llm_client::LlmClient};
 use crate::globals::*;
 
 use super::game_info::{GameInfo, PlayerCharacterInfo};
@@ -123,8 +123,11 @@ impl CommandContext {
     pub async fn execute_prompt(&self, prompt: String) -> Result<String, ()> {
         self.notify_typing().await;
         info!("[execute_prompt] prompt: {}", prompt);
-        let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
-        match r {
+
+        let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
+        let client = LlmClient::new(config);
+        let r2 = client.chat(&prompt).await;
+        match r2 {
             Ok(result) => {
                 info!("[execute_prompt] result: {}", result);
                 Ok(result)
@@ -135,5 +138,18 @@ impl CommandContext {
                 Err(())
             }
         }
+
+        // let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
+        // match r {
+        //     Ok(result) => {
+        //         info!("[execute_prompt] result: {}", result);
+        //         Ok(result)
+        //     },
+        //     Err(e) => {
+        //         error!("[execute_prompt] Failed to execute prompt: {}", e);
+        //         self.room.send(RoomMessageEventContent::notice_plain(format!("[execute_prompt] Failed to execute prompt: {}", e))).await.unwrap();
+        //         Err(())
+        //     }
+        // }
     }
 }

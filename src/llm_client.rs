@@ -1,4 +1,4 @@
-use crate::llm_config::{ClientConfig, LlmConfig};
+use crate::config::Config;
 use genai::chat::{ChatMessage, ChatRequest};
 use genai::Client;
 use genai::resolver::AuthData;
@@ -9,58 +9,46 @@ pub struct LlmClient {
 }
 
 impl LlmClient {
-    pub fn new(config: LlmConfig) -> Self {
-        let mut client_builder = Client::builder();
-        
-        for client_config in config.clients {
-            match client_config {
-                ClientConfig::OpenaiCompatible { name, api_base, api_key } => {
-                    // Start of workaround: Set env vars based on client name
-                    if name == "groq" {
-                        unsafe {
-                            std::env::set_var("GROQ_API_KEY", &api_key);
-                        }
-                    } else if name == "sambanova" {
-                         // Genai might not support sambanova native, but if it's openai compatible,
-                         // we might need to rely on OPENAI_API_BASE, but that is global.
-                         // For now, only Groq keys are set if name matches.
-                         // We might need a better solution for generic openai-compatible.
-                         // But for now, let's just log or set a specific var if we knew it.
-                         // e.g. OPENAI_API_KEY usually works for the main provider.
-                    }
-                    // End of workaround
-                }
-                ClientConfig::Gemini { api_key } => {
-                    unsafe {
-                        std::env::set_var("GEMINI_API_KEY", api_key);
-                    }
-                }
+    pub fn new(config: Config) -> Self {
+        let client_builder = Client::builder();
+        let mut available_models = vec![];
+
+        if config.gemini_api_key.is_some() {
+            unsafe {
+                std::env::set_var("GEMINI_API_KEY", config.gemini_api_key.unwrap());
+            }
+
+            if config.gemini_models.is_some() {
+                let models = config.gemini_models.unwrap();
+                available_models.extend(models);
             }
         }
-        
-        // RE-EVALUATION: Without Exact Docs on "openai-compatible" in genai rust, I should probably search for an example or assume a generic structure.
-        // However, I can implement the skeleton and then 'fix' it.
-        
+
+        if config.groq_api_key.is_some() {
+            unsafe {
+                std::env::set_var("GROQ_API_KEY", config.groq_api_key.unwrap());
+            }
+
+            if config.groq_models.is_some() {
+                let models = config.groq_models.unwrap();
+                available_models.extend(models);
+            }
+        }
+
         LlmClient {
              client: client_builder.build(),
-             default_model: config.model,
+             default_model: available_models[0].clone(),
         }
     }
 
     pub async fn chat(&self, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        // https://github.com/jeremychone/rust-genai/tree/main/examples
         let chat_req = ChatRequest::new(vec![
             ChatMessage::user(prompt.to_string()),
         ]);
 
         let response = self.client.exec_chat_stream(&self.default_model, chat_req, None).await?;
-        //let content = response.content.;
-
         let content = print_chat_stream(response, None).await?;
-
-        // match response.content {
-        //     Some(genai::chat::MessageContent::Text(s)) => s,
-        //     _ => String::from(""),
-        // };
         Ok(content)
     }
 }
