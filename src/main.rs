@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables, unused_imports)]
-#![feature(test)]
+//#![feature(test)]
 
 use std::{fmt, fs::{self, File}};
 use std::{collections::HashMap, io::Read, path::PathBuf, sync::Mutex};

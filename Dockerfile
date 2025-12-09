@@ -1,7 +1,7 @@
 # https://dev.to/rogertorres/first-steps-with-docker-rust-30oi
 
 # Rust nightly as the base image
-FROM rustlang/rust:nightly AS build
+FROM rust:1.91 AS build
 
 # Create a new empty shell project
 RUN USER=root cargo new --bin text-rpg
