@@ -1070,14 +1070,16 @@ dependencies = [
 
 [[package]]
 name = "genai"
-version = "0.4.4"
+version = "0.5.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "814c33e79506556ecba6b5f8e39a2fe423262fd3903856377ad2ae6a857c6032"
+checksum = "2a6f5510ed5487f7fd8979f5195d1b95326b3bee4b9eed308ee5aa2d1ce08a65"
 dependencies = [
+ "base64 0.22.1",
  "bytes",
  "derive_more 2.1.0",
  "eventsource-stream",
  "futures",
+ "mime_guess",
  "reqwest 0.12.9",
  "reqwest-eventsource",
  "serde",
@@ -2039,6 +2041,16 @@ name = "mime2ext"
 version = "0.1.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "515a63dc9666c865e848b043ab52fe9a5c713ae89cde4b5fbaae67cfd614b93a"
+
+[[package]]
+name = "mime_guess"
+version = "2.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
+dependencies = [
+ "mime",
+ "unicase",
+]
 
 [[package]]
 name = "minimal-lexical"
