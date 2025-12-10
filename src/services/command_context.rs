@@ -125,7 +125,8 @@ impl CommandContext {
         info!("[execute_prompt] prompt: {}", prompt);
 
         let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
-        let client = LlmClient::new(config);
+        let mut client = LlmClient::new(config);
+        client.populate_models().await;
         let r2 = client.chat(&prompt).await;
         match r2 {
             Ok(result) => {

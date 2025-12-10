@@ -8,9 +8,9 @@ pub struct Config {
     pub rooms: Option<Vec<String>>,
     pub getimgai_api_key: Option<String>,
     pub gemini_api_key: Option<String>,
-    pub gemini_models: Option<Vec<String>>,
     pub groq_api_key: Option<String>,
-    pub groq_models: Option<Vec<String>>,
+    pub openai_api_key: Option<String>,
+    pub models: Option<Vec<String>>,
 }
 
 impl fmt::Display for Config {

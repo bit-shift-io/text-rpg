@@ -5,6 +5,8 @@ use regex::Regex;
 use crate::{services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo, getimgai::get_url_for_prompt}};
 use crate::globals::*;
 
+// todo: explore tool use: https://github.com/jeremychone/rust-genai/blob/main/examples/c08-tooluse.rs
+// as an alternate to reponding in JSON. Does this do the same thing behinds the scenes anyway?
 
 const START_PROMPT: &str = r#"
 I am a dungeon master. I need to create a setup for a new dungeons and dragons role playing game.
