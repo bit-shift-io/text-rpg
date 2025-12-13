@@ -94,6 +94,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         info!("Error syncing: {e}");
     }
 
+    // Announce entry in all currently joined rooms
+    let announcement = "Hello! I am online and ready to facilitate your text-based RPG adventures.";
+    let content = RoomMessageEventContent::text_plain(announcement);
+    
+    let allowed_rooms = config.rooms.clone().unwrap_or_default();
+    
+    for room in bot.client().joined_rooms() {
+        let room_name = room.name().unwrap_or_default();
+        if !allowed_rooms.iter().any(|r| *r == room_name) {
+            continue;
+        }
+
+        let content = content.clone();
+        tokio::spawn(async move {
+            if let Err(e) = room.send(content).await {
+                error!("Failed to send announcement to room {}: {:?}", room.room_id(), e);
+            } else {
+                 info!("Announced entry in room {}", room.room_id());
+            }
+        });
+    }
+
+    // Register handler for future room joins
+    //bot.announce_on_join();
+
     bot.register_command(".help", help::help);
     bot.register_command(".start", start::start);
     bot.register_command(".act", act::act);

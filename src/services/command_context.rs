@@ -124,7 +124,7 @@ impl CommandContext {
         self.notify_typing().await;
         info!("[execute_prompt] prompt: {}", prompt);
 
-        let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
+        //let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
         let mut client_mut = GLOBAL_LLM_CLIENT.lock().await; //.as_ref();//.unwrap();
         let client = client_mut.as_mut().unwrap();
         
