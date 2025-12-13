@@ -2,7 +2,7 @@ use tracing::{error, info};
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-use crate::{services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo, getimgai::get_url_for_prompt}};
+use crate::{services::{command_context::CommandContext, extract::{extract_between, extract_markdown_block}, game_info::GameInfo, getimgai::get_url_for_prompt}};
 use crate::globals::*;
 
 // todo: explore tool use: https://github.com/jeremychone/rust-genai/blob/main/examples/c08-tooluse.rs
@@ -13,9 +13,9 @@ I am a dungeon master. I need to create a setup for a new dungeons and dragons r
 The theme of the game is: ${theme_name}.
 ${theme_description}
 
-I need you to return a JSON object placed between the opening XML tag <json> and the closing xml tag </json>.
-Here is the schema I need the JSON wrapped in XML tags:
-<json>
+I need you to return a JSON object wrapped in a markdown code block with the language "json".
+Here is the schema I need:
+```json
 {
     "theme": "${theme_name}",
     "theme_description": "${theme_description}",
@@ -85,7 +85,7 @@ Here is the schema I need the JSON wrapped in XML tags:
         }
     ]
 }
-</json>
+```
 
 I also need a seperate story placed between an opening xml tag <story> and the closing xml tag </story>.
 
@@ -116,7 +116,7 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
         .replace("${extra_user_prompt}", &context.clean_text());
     let start_response = context.execute_prompt(start_prompt).await?;
 
-    let json_strs = extract_between("<json>", "</json>", &start_response)?;
+    let json_strs = extract_markdown_block("json", &start_response)?;
     if json_strs.len() == 0 {
         context.room_send("[start] Failed to get JSON from response.").await.unwrap();
         return Ok(());

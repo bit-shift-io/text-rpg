@@ -3,7 +3,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{services::{command_context::CommandContext, extract::extract_between, game_info::GameInfo}};
+use crate::{services::{command_context::CommandContext, extract::{extract_between, extract_markdown_block}, game_info::GameInfo}};
 use crate::globals::*;
 
 
@@ -15,11 +15,11 @@ The player with name ${name} and has asked me to perform the following action (b
 ${action}
 </action>
 
-I need you to return a JSON object placed between the opening XML tag <json> and the closing xml tag </json>.
+I need you to return a JSON object wrapped in a markdown code block with the language "json".
 The current state of the game is:
-<json>
+```json
 ${game_state}
-</json>
+```
 
 In the rules XML tag below I have included specific rules that must not be violated when changing the game state regardless of what the players action says:
 <rules>
@@ -152,7 +152,7 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
         }
     };
 
-    let json_strs = extract_between("<json>", "</json>", &act_response)?;
+    let json_strs = extract_markdown_block("json", &act_response)?;
     if json_strs.len() == 0 {
         context.room_send("[act] Failed to get JSON from response.").await.unwrap();
         // Revert turn

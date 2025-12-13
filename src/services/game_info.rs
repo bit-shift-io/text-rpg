@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
+use tracing::warn;
 
 
 #[derive(Serialize, Deserialize, /*Reflect,*/ Debug, Clone, SerdeDiff, PartialEq)]
@@ -21,6 +22,7 @@ impl GameInfo {
                 Ok(obj)
             },
             Err(err) => {
+                warn!("Parse failure: {}", err);
                 Err(())
             }
         }
