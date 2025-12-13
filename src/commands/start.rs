@@ -14,78 +14,72 @@ The theme of the game is: ${theme_name}.
 ${theme_description}
 
 I need you to return a JSON object wrapped in a markdown code block with the language "json".
-Here is the schema I need:
-```json
-{
-    "theme": "${theme_name}",
-    "theme_description": "${theme_description}",
-    "rooms": [
-        // An array containing objects with following structure:
-        {
-            "room_number": {The room number},
-            "name": {The name of the room},
-            "description": {The description of the room},
-            "items": [A comma separated list of items in the room],
-            "is_start_room": {Is the room the room to start the game in},
-            "is_end_room": {Is the room the room to end the game in},
+Here is the TypeScript interface for the GameState that I need you to generate:
+```typescript
+interface GameState {
+  theme: string;
+  theme_description: string;
+  rooms: Room[];
+  room_connections: RoomConnection[];
+  player_characters: PlayerCharacter[];
+  objectives: Objective[];
+}
 
-            "monsters": [
-                // An array containing objects with following structure:
-                {
-                    "name": {The name of a monster},
-                    "description": {A short description of the monster},
-                    "abilities": [A comma separated list of special abilties the monster has],
-                    "health: {The health of the monster},
-                    "strength": {The start strength of the monster},
-                    "dexterity": {The start dexterity of the monster},
-                    "constitution": {The start constitution of the monster},
-                    "intelligence": {The start intelligence of the monster},
-                    "wisdom": {The start wisdom of the monster},
-                    "items": [A comma separated list of items the monster has],
-                }
-            ]
-        }
-    ],
+interface Room {
+  room_number: number;
+  name: string;
+  description: string;
+  items: string[];
+  is_start_room: boolean;
+  is_end_room: boolean;
+  monsters: Monster[];
+}
 
-    "room_connections": [
-        // An array containing objects with following structure:
-        {
-            "connected_room_numbers": [A list of connected room numbers],
-            "connection_type": {The type of the connection, e.g. "door" or "portal"},
-            "description": {A short description of the connection}
-        }
-    ],
+interface Monster {
+  name: string;
+  description: string;
+  abilities: string[];
+  health: number;
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  intelligence: number;
+  wisdom: number;
+  items: string[];
+}
 
-    "player_characters": [
-        // An array with ${num_players} players. The names of the players are: ${player_names}.
-        // The player objects have the following structure:
-        {
-            "name": {The player name to assign this character too},
-            "character_class": {The character class, chosen from: ${character_classes}},
-            "abilities": [A comma separated list of special abilties the character has],
-            "items": [A comma separated list of items the character has],
-            "room_number": {The room number, must be the same as the room that has "is_start_room" set to true},
-            "health: {The start health of the character},
-            "strength": {The start strength of the character},
-            "dexterity": {The start dexterity of the character},
-            "constitution": {The start constitution of the character},
-            "intelligence": {The start intelligence of the character},
-            "wisdom": {The start wisdom of the character},
-        }
-    ],
+interface RoomConnection {
+  connected_room_numbers: number[];
+  connection_type: string; // e.g. "door" or "portal"
+  description: string;
+}
 
-    "objectives": [
-        // I need a list of objectives for the players to achieve together.
-        // The objective objects have the following structure:
-        {
-            "goal": {The goal},
-            "items": [A comma separated list of items required to complete the objective],
-            "monsters": [A comma separated list of monsters required to complete the objective],
-            "completed": false,
-        }
-    ]
+interface PlayerCharacter {
+  name: string; // Must be one of: ${player_names}
+  character_class: string; // Chosen from: ${character_classes}
+  abilities: string[];
+  items: string[];
+  room_number: number; // Must be start room
+  health: number;
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  intelligence: number;
+  wisdom: number;
+}
+
+interface Objective {
+  goal: string;
+  items: string[];
+  monsters: string[];
+  completed: boolean; // Should start as false
 }
 ```
+
+The `rooms` array should contain the rooms in the dungeon.
+The `room_connections` array should describe how rooms are connected.
+The `player_characters` array should contain ${num_players} players using the provided names.
+The `objectives` array should contain a list of objectives for the players to achieve.
 
 I also need a seperate story placed between an opening xml tag <story> and the closing xml tag </story>.
 

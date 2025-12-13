@@ -21,11 +21,74 @@ The current state of the game is:
 ${game_state}
 ```
 
+The game state is defined by the following TypeScript interface:
+```typescript
+interface GameState {
+  rooms: Room[];
+  room_connections: RoomConnection[];
+  player_characters: PlayerCharacter[];
+  objectives: Objective[];
+  theme: string;
+  theme_description: string;
+}
+
+interface Room {
+  room_number: number;
+  name: string;
+  description: string;
+  monsters: Monster[];
+  items: string[];
+  is_start_room: boolean;
+  is_end_room: boolean;
+}
+
+interface RoomConnection {
+  connected_room_numbers: number[];
+  connection_type: string;
+  description: string;
+}
+
+interface Monster {
+  name: string;
+  description: string;
+  abilities: string[];
+  items: string[];
+  health: number;
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  intelligence: number;
+  wisdom: number;
+}
+
+interface PlayerCharacter {
+  name: string;
+  character_class: string;
+  abilities: string[];
+  items: string[];
+  room_number: number;
+  health: number;
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  intelligence: number;
+  wisdom: number;
+}
+
+interface Objective {
+  goal: string;
+  items: string[];
+  monsters: string[];
+  completed: boolean;
+}
+```
+
 In the rules XML tag below I have included specific rules that must not be violated when changing the game state regardless of what the players action says:
 <rules>
 The user may not invent items that are not in the game state.
 If the user attacks a monster, the monster may retaliate and this should be reflected in the game state JSON.
-The format must be the same as the current game state, do not add additional fields, you may only modify existing fields.
+You must return a valid JSON object satisfying the GameState interface.
+Do not add additional fields, you may only modify existing fields.
 Do not prompt for further instructions, if you are unsure make your best guess.
 </rules>
 
