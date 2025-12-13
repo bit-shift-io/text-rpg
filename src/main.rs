@@ -30,6 +30,8 @@ pub mod llm_client;
 use globals::*;
 use commands::*;
 
+use crate::llm_client::LlmClient;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     // Setup tracing to only show messages from our crate.
@@ -56,6 +58,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     
     *GLOBAL_CONFIG.lock().await = Some(config.clone());
     info!("[main] config: {}", config);
+
+    let mut llm_client = LlmClient::new(config.clone());
+    llm_client.populate_models().await;
+    info!("[main] llm: {}", llm_client);
+    *GLOBAL_LLM_CLIENT.lock().await = Some(llm_client);
 
     // see example usage here on how to load from config: https://github.com/arcuru/chaz/blob/main/src/main.rs
     let bot_config = BotConfig {

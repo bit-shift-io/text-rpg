@@ -125,12 +125,13 @@ impl CommandContext {
         info!("[execute_prompt] prompt: {}", prompt);
 
         let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
-        let mut client = LlmClient::new(config);
-        client.populate_models().await;
-        let r2 = client.chat(&prompt).await;
+        let mut client_mut = GLOBAL_LLM_CLIENT.lock().await; //.as_ref();//.unwrap();
+        let client = client_mut.as_mut().unwrap();
+        
+        let r2 = client.chat_with_retry(&prompt).await;
         match r2 {
             Ok(result) => {
-                info!("[execute_prompt] result: {}", result);
+                info!("[execute_prompt] model: {}, result: {}", client.model(), result);
                 Ok(result)
             },
             Err(e) => {
@@ -139,18 +140,5 @@ impl CommandContext {
                 Err(())
             }
         }
-
-        // let r = get_ai_chat().await.execute(&None, prompt, Vec::new());
-        // match r {
-        //     Ok(result) => {
-        //         info!("[execute_prompt] result: {}", result);
-        //         Ok(result)
-        //     },
-        //     Err(e) => {
-        //         error!("[execute_prompt] Failed to execute prompt: {}", e);
-        //         self.room.send(RoomMessageEventContent::notice_plain(format!("[execute_prompt] Failed to execute prompt: {}", e))).await.unwrap();
-        //         Err(())
-        //     }
-        // }
     }
 }

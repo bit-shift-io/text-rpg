@@ -3,6 +3,7 @@ use std::fs;
 use std::{collections::HashMap, io::Read, path::PathBuf};
 use std::sync::LazyLock;
 
+use crate::llm_client::LlmClient;
 use crate::services::game_info::GameInfo;
 use crate::{config::Config};
 
@@ -13,6 +14,10 @@ use tokio::sync::Mutex;
 
 /// Holds the config for the bot
 pub static GLOBAL_CONFIG: LazyLock<Mutex<Option<Config>>> = LazyLock::new(|| { Mutex::new(None) });
+
+/// Holds the LLM client
+pub static GLOBAL_LLM_CLIENT: LazyLock<Mutex<Option<LlmClient>>> = LazyLock::new(|| { Mutex::new(None) });
+
 
 // Holds the current game info
 pub static GLOBAL_GAME_INFO: LazyLock<Mutex<Option<GameInfo>>> = LazyLock::new(|| { Mutex::new(None) });
