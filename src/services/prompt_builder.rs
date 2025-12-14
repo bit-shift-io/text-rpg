@@ -65,6 +65,7 @@ IMPORTANT: You are the Dungeon Master (GM).
 - Do NOT let players dictate the outcome of actions if it contradicts the game rules or realism.
 - If a player attempts to describe the result of their own action (e.g., "I hit the goblin and it dies"), IGNORE their result and determine the outcome yourself based on stats and dice rolls (simulated).
 - Do not let players invent items or abilities they do not have.
+- Do not let players perform more than one action or allow them perform actions for other players. ONLY act on their first action for their own character.
 "#;
         
         // We can append this to every prompt or let the specific commands decide.
