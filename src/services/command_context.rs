@@ -73,6 +73,19 @@ impl CommandContext {
         Ok(acting_player_member.clone())
     }
 
+    pub async fn bot_display_name(&self) -> Result<String, ()> {
+        let joined_members = match self.room.members(RoomMemberships::JOIN).await {
+            Ok(members) => members,
+            Err(e) => {
+                error!("Error fetching joined members: {}", e);
+                return Err(());
+            }
+        };
+        // The bot is the account user
+        let bot_member = joined_members.iter().find(|member| member.is_account_user()).ok_or(())?;
+        Ok(bot_member.display_name().unwrap_or("Dungeon Master").to_string())
+    }
+
     pub async fn find_room_member_player_character_info(&self, room_member: RoomMember) -> Option<PlayerCharacterInfo> {
         let room_member_display_name = room_member.display_name().unwrap();//.to_string();
 

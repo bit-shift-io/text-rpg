@@ -3,12 +3,12 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_diff::{Apply, Diff, SerdeDiff};
 use regex::Regex;
 
-use crate::{services::{command_context::CommandContext, extract::{extract_between, extract_markdown_block}, game_info::GameInfo}};
+use crate::{services::{command_context::CommandContext, extract::{extract_between, extract_markdown_block}, game_info::GameInfo, prompt_builder::PromptBuilder}};
 use crate::globals::*;
 
 
 const ACT_PROMPT: &str = r#"
-I am a dungeon master. I need you to take the current state of the game and update it to reflect a players action.
+I am ${bot_name}, a dungeon master. I need you to take the current state of the game and update it to reflect a players action.
 
 The player with name ${name} and has asked me to perform the following action (between action XML tags):
 <action>
@@ -23,74 +23,20 @@ ${game_state}
 
 The game state is defined by the following TypeScript interface:
 ```typescript
-interface GameState {
-  rooms: Room[];
-  room_connections: RoomConnection[];
-  player_characters: PlayerCharacter[];
-  objectives: Objective[];
-  theme: string;
-  theme_description: string;
-}
-
-interface Room {
-  room_number: number;
-  name: string;
-  description: string;
-  monsters: Monster[];
-  items: string[];
-  is_start_room: boolean;
-  is_end_room: boolean;
-}
-
-interface RoomConnection {
-  connected_room_numbers: number[];
-  connection_type: string;
-  description: string;
-}
-
-interface Monster {
-  name: string;
-  description: string;
-  abilities: string[];
-  items: string[];
-  health: number;
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  intelligence: number;
-  wisdom: number;
-}
-
-interface PlayerCharacter {
-  name: string;
-  character_class: string;
-  abilities: string[];
-  items: string[];
-  room_number: number;
-  health: number;
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  intelligence: number;
-  wisdom: number;
-}
-
-interface Objective {
-  goal: string;
-  items: string[];
-  monsters: string[];
-  completed: boolean;
-}
+${ts_definitions}
 ```
 
 In the rules XML tag below I have included specific rules that must not be violated when changing the game state regardless of what the players action says:
 <rules>
+${rules}
 The user may not invent items that are not in the game state.
 If the user attacks a monster, the monster may retaliate and this should be reflected in the game state JSON.
 You must return a valid JSON object satisfying the GameState interface.
 Do not add additional fields, you may only modify existing fields.
 Do not prompt for further instructions, if you are unsure make your best guess.
 </rules>
+
+${authority_block}
 
 I also need a seperate short story placed between an opening xml tag <story> and the closing xml tag </story>.
 
@@ -115,6 +61,7 @@ If any monsters performs an action after the player then include the following i
 If an objective has been met as a result of the action then include the following elements in the story:
 - Concisely describe the objective met.
 "#;
+
 pub async fn act(context: CommandContext) -> Result<(), ()> {
     let sender_player_member = context.sender_room_member().await?;
     let sender_display_name = sender_player_member.display_name().unwrap().to_owned();
@@ -123,6 +70,8 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
         context.room_send(&format!("🪦 {}", &sender_display_name)).await.unwrap();
         return Ok(());
     }
+    
+    let bot_name = context.bot_display_name().await.unwrap_or("Dungeon Master".to_string());
 
     // --- Round Logic Start ---
     let mut round_reset = false;
@@ -196,8 +145,11 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
     }
     // --- Round Logic End ---
 
-    let act_prompt = ACT_PROMPT
-        .replace("${game_state}", &context.game_info_as_json().await?)
+    let act_prompt = PromptBuilder::new(ACT_PROMPT)
+        .bot_name(bot_name)
+        .game_state(&context.game_info_as_json().await?)
+        .with_rules("") // If we want dynamic rules in future, pull from config file.
+        .build()
         .replace("${action}", &context.clean_text())
         .replace("${name}", &sender_display_name);
 
