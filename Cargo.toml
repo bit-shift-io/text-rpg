@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 headjack = "0.4.0"
 #kalosm = { git = "https://github.com/floneum/floneum", version = "0.3.2", features = ["full"] }
-matrix-sdk = "0.7.1"
+matrix-sdk = { version = "0.7.1", features = ["markdown"] }
 tokio = { version = "1.40.0", features = ["full"] }
 tracing = "0.1.40"
 serde = "1.0"
