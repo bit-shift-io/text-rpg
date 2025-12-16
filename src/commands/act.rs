@@ -62,6 +62,27 @@ If an objective has been met as a result of the action then include the followin
 - Concisely describe the objective met.
 "#;
 
+const OBJECTIVE_COMPLETED_PROMPT: &str = r#"
+I am ${bot_name}, a dungeon master.
+One or more objectives have been completed by the players!
+The completed objective(s) are:
+${completed_objectives}
+
+The remaining objectives are:
+${remaining_objectives}
+
+The current game state is:
+```json
+${game_state}
+```
+
+I need you to return a response wrapped in <story> tags.
+In the story:
+- Congratulate the players.
+- Provide a narrative description of the accomplishment.
+- Clearly state what objectives remain (if any) and guide them on what is next in their journey.
+"#;
+
 pub async fn act(context: CommandContext) -> Result<(), ()> {
     let sender_player_member = context.sender_room_member().await?;
     let sender_display_name = sender_player_member.display_name().unwrap().to_owned();
@@ -211,10 +232,20 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
     
     // Check for round completion based on NEW game info (in case someone died)
     let total_alive_players = new_game_info.player_characters.iter().filter(|p| p.is_alive()).count();
+
+    // Capture old game info for objective comparison
+    let old_game_info_opt = {
+        let guard = GLOBAL_GAME_INFO.lock().await;
+        guard.clone()
+    };
     
     *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
 
     context.room_send(&story_strs[0]).await.unwrap();
+
+    if let Some(old_info) = old_game_info_opt {
+        check_objectives(&context, &old_info, &new_game_info).await.ok();
+    }
 
     // --- Check End of Round ---
     {
@@ -229,5 +260,53 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
         }
     }
 
+    Ok(())
+}
+
+async fn check_objectives(context: &CommandContext, old_info: &GameInfo, new_info: &GameInfo) -> Result<(), ()> {
+    let mut completed_now = Vec::new();
+    for new_obj in &new_info.objectives {
+        if new_obj.completed {
+            // Check if it was already completed in old_info
+            // We match by goal string as we don't have IDs
+            let was_completed = old_info.objectives.iter().any(|old_obj| old_obj.goal == new_obj.goal && old_obj.completed);
+            if !was_completed {
+                completed_now.push(new_obj.clone());
+            }
+        }
+    }
+
+    if completed_now.is_empty() {
+        return Ok(());
+    }
+
+    let all_completed = new_info.objectives.iter().all(|o| o.completed);
+
+    if all_completed {
+        // Trigger end game logic
+        return crate::commands::end::execute_end(context).await;
+    }
+
+    // Trigger objective completed message
+    let bot_name = context.bot_display_name().await.unwrap_or("Dungeon Master".to_string());
+    
+    let completed_list = completed_now.iter().map(|o| format!("- {}", o.goal)).collect::<Vec<_>>().join("\n");
+    let remaining = new_info.objectives.iter().filter(|o| !o.completed).map(|o| format!("- {}", o.goal)).collect::<Vec<_>>().join("\n");
+    let remaining_list = if remaining.is_empty() { "None".to_string() } else { remaining };
+
+    let prompt = PromptBuilder::new(OBJECTIVE_COMPLETED_PROMPT)
+         .bot_name(bot_name)
+         .build()
+         .replace("${completed_objectives}", &completed_list)
+         .replace("${remaining_objectives}", &remaining_list)
+         .replace("${game_state}", &new_info.to_json_string().unwrap_or_default());
+    
+    let response = context.execute_prompt(prompt).await.unwrap_or_default();
+    if let Ok(stories) = extract_between("<story>", "</story>", &response) {
+         if !stories.is_empty() {
+             context.room_send(&stories[0]).await.unwrap();
+         }
+    }
+    
     Ok(())
 }

@@ -125,6 +125,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     bot.register_command(".ask", ask::ask);
     bot.register_command(".dump", dump::dump);
     bot.register_command(".llm", llm_test::llm_test);
+    bot.register_command(".end", end::end);
+
     
     // Run the bot, this should never return except on error
     if let Err(e) = bot.run().await {
