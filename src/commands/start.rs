@@ -46,7 +46,12 @@ IMPORTANT: The user input in '${extra_user_prompt}' should OVERRIDE any theme or
 pub async fn start(context: CommandContext) -> Result<(), ()> {
     let player_members = context.all_player_room_members().await;
     let num_players = player_members.len();
-    let player_names_str = player_members.clone().into_iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect::<Vec<String>>().join(", ");
+    let player_names: Vec<String> = player_members.iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect();
+    let player_names_str = player_names.join(", ");
+
+    let bold_player_names = player_names.iter().map(|name| format!("**{}**", name)).collect::<Vec<String>>().join(", ");
+    context.room_send(&format!("Starting a new game with the following players: {}.\nPlease wait a moment while I prepare the game.", bold_player_names)).await.unwrap();
+
     let bot_name = context.bot_display_name().await.unwrap_or("Dungeon Master".to_string());
 
     let theme = crate::themes::get_random_theme(num_players);

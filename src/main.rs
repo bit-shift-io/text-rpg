@@ -95,8 +95,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     }
 
     // Announce entry in all currently joined rooms
-    let announcement = "Hello! I am online and ready to facilitate your text-based RPG adventures.";
-    let content = RoomMessageEventContent::text_plain(announcement);
+    let announcement = "Hello! I am online and ready to facilitate your text-based RPG adventures.\nUse the **.help** command to see available commands.";
+    let content = RoomMessageEventContent::notice_markdown(announcement);
     
     let allowed_rooms = config.rooms.clone().unwrap_or_default();
     

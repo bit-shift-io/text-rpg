@@ -13,7 +13,7 @@ pub trait BotExt {
         F: FnOnce(CommandContext) -> Fut + Send + 'static + Clone + Sync,
         Fut: std::future::Future<Output = Result<(), ()>> + Send + 'static;
 
-    fn announce_on_join(&self);
+    //fn announce_on_join(&self);
 }
 
 impl BotExt for Bot {
@@ -61,46 +61,46 @@ impl BotExt for Bot {
         );
     }
 
-    fn announce_on_join(&self) {
-        let client = self.client();
-        let username = self.client().user_id().unwrap().to_owned();
+    // fn announce_on_join(&self) {
+    //     let client = self.client();
+    //     let username = self.client().user_id().unwrap().to_owned();
         
-        client.add_event_handler(
-            move |event: matrix_sdk::ruma::events::room::member::OriginalSyncRoomMemberEvent, room: Room| async move {
-                // Check if it's us joining
-                if event.state_key != username {
-                    return;
-                }
+    //     client.add_event_handler(
+    //         move |event: matrix_sdk::ruma::events::room::member::OriginalSyncRoomMemberEvent, room: Room| async move {
+    //             // Check if it's us joining
+    //             if event.state_key != username {
+    //                 return;
+    //             }
 
-                // Check if it is a join event
-                use matrix_sdk::ruma::events::room::member::MembershipState;
-                if event.content.membership != MembershipState::Join {
-                    return;
-                }
+    //             // Check if it is a join event
+    //             use matrix_sdk::ruma::events::room::member::MembershipState;
+    //             if event.content.membership != MembershipState::Join {
+    //                 return;
+    //             }
 
-                // Check if the room is in our allowlist
-                let allowed_rooms = {
-                    let config_guard = crate::GLOBAL_CONFIG.lock().await;
-                    config_guard.as_ref().and_then(|c| c.rooms.clone()).unwrap_or_default()
-                };
+    //             // Check if the room is in our allowlist
+    //             let allowed_rooms = {
+    //                 let config_guard = crate::GLOBAL_CONFIG.lock().await;
+    //                 config_guard.as_ref().and_then(|c| c.rooms.clone()).unwrap_or_default()
+    //             };
 
-                let room_name = room.name().unwrap_or_default();
-                if !allowed_rooms.iter().any(|r| *r == room_name) {
-                    return;
-                }
+    //             let room_name = room.name().unwrap_or_default();
+    //             if !allowed_rooms.iter().any(|r| *r == room_name) {
+    //                 return;
+    //             }
 
-                // We just joined! Announce ourselves.
-                let announcement = "Hello! I am online and ready to facilitate your text-based RPG adventures.";
-                let content = RoomMessageEventContent::text_plain(announcement);
+    //             // We just joined! Announce ourselves.
+    //             let announcement = "Hello! I am online and ready to facilitate your text-based RPG adventures.";
+    //             let content = RoomMessageEventContent::text_plain(announcement);
                 
-                if let Err(e) = room.send(content).await {
-                    error!("Failed to send announcement to room {}: {:?}", room.room_id(), e);
-                } else {
-                    info!("Announced entry in room {}", room.room_id());
-                }
-            }
-        );
-    }
+    //             if let Err(e) = room.send(content).await {
+    //                 error!("Failed to send announcement to room {}: {:?}", room.room_id(), e);
+    //             } else {
+    //                 info!("Announced entry in room {}", room.room_id());
+    //             }
+    //         }
+    //     );
+    // }
 }
 
 /// Verify if the sender is on the allow_list
