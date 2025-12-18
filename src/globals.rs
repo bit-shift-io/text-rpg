@@ -31,3 +31,9 @@ pub struct RoundInfo {
 }
 
 pub static GLOBAL_ROUND_INFO: LazyLock<Mutex<Option<RoundInfo>>> = LazyLock::new(|| { Mutex::new(None) });
+
+// Holds the list of joined players (User IDs)
+pub static GLOBAL_LOBBY: LazyLock<Mutex<Vec<String>>> = LazyLock::new(|| { Mutex::new(Vec::new()) });
+
+use crate::settings::Settings;
+pub static GLOBAL_SETTINGS: LazyLock<Mutex<Settings>> = LazyLock::new(|| { Mutex::new(Settings::load()) });

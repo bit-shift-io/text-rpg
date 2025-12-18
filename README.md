@@ -45,6 +45,18 @@ Note that once you run docker-compose, the container will start and will be star
 
 ```cargo run --release```
 
+## Commands
+
+* **.start** - Start a new game with joined players.
+* **.join** - Join the adventure party lobby.
+* **.leave** - Leave the adventure party lobby.
+* **.act {text}** - Perform an action.
+* **.ask {text}** - Ask a question.
+* **.set {key} {value}** - Set a game setting (e.g. .set timeout 30s).
+* **.end** - End the current game.
+* **.help** - Show this help message.
+* **.dump** - Dump the game state for debugging.
+
 ## TODO list
 
 * Some end game story prompt for when all objectives are met

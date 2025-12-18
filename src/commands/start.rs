@@ -44,7 +44,28 @@ IMPORTANT: The user input in '${extra_user_prompt}' should OVERRIDE any theme or
 "#;
 
 pub async fn start(context: CommandContext) -> Result<(), ()> {
-    let player_members = context.all_player_room_members().await;
+    let lobby = GLOBAL_LOBBY.lock().await;
+    if lobby.is_empty() {
+        context.room_send("No players have joined the adventure party. Type '.join' to join.").await.unwrap();
+        return Ok(());
+    }
+
+    let all_members = context.all_player_room_members().await;
+    let mut player_members = Vec::new();
+    
+    // Filter room members to only those in the lobby
+    for member in all_members {
+        if lobby.contains(&member.user_id().to_string()) {
+            player_members.push(member);
+        }
+    }
+
+    if player_members.is_empty() {
+        // This edge case might happen if people in the lobby left the room
+         context.room_send("No joined players were found in this room.").await.unwrap();
+         return Ok(());
+    }
+
     let num_players = player_members.len();
     let player_names: Vec<String> = player_members.iter().map(|player_member| player_member.display_name().unwrap().to_string()).collect();
     let player_names_str = player_names.join(", ");

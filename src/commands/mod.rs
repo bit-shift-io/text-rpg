@@ -5,3 +5,6 @@ pub mod help;
 pub mod ask;
 pub mod llm_test;
 pub mod end;
+pub mod join;
+pub mod leave;
+pub mod set;

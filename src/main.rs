@@ -25,6 +25,7 @@ mod globals;
 mod config;
 mod commands;
 mod themes;
+mod settings;
 pub mod llm_client;
 
 use globals::*;
@@ -46,12 +47,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         .init();
 
     // first try to read from the docker config location, else fallback to the local dev version
+    // first try to read from the docker config location, then local data folder, else fallback to the local dev version
     let file_contents = match fs::read_to_string("/data/config.yml") {
         Ok(contents) => {
             contents
         },
         Err(e) => {
-            fs::read_to_string("config.yml").expect("Unable to read config.yml")
+            match fs::read_to_string("data/config.yml") {
+                Ok(contents) => contents,
+                Err(e) => {
+                     fs::read_to_string("config.yml").expect("Unable to read config.yml from /data, data/ or .")
+                }
+            }
         }
     };
     let config: Config = serde_yml::from_str(&file_contents).unwrap();
@@ -126,6 +133,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     bot.register_command(".dump", dump::dump);
     bot.register_command(".llm", llm_test::llm_test);
     bot.register_command(".end", end::end);
+    bot.register_command(".join", join::join);
+    bot.register_command(".leave", leave::leave);
+    bot.register_command(".set", set::set);
 
     
     // Run the bot, this should never return except on error
