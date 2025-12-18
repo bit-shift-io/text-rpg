@@ -112,18 +112,52 @@ impl CommandContext {
         }
     }
 
-    pub async fn with_game_info<T>(&self, callback: impl FnOnce(&GameInfo) -> Result<T, ()>) -> Result<T, ()> {
-        let mutex_guard = GLOBAL_GAME_INFO.lock().await;
-        let game_info_option = mutex_guard.as_ref();
+    pub async fn with_room_state<T, F>(&self, callback: F) -> Result<T, ()>
+    where
+        F: FnOnce(&RoomState) -> Result<T, ()>,
+    {
+        let room_id = self.room.room_id().to_string();
+        let states = GLOBAL_ROOM_STATES.lock().await;
+        let state = states.get(&room_id).ok_or(())?;
+        callback(state)
+    }
 
-        if game_info_option.is_none() {
-            error!("No game in progress.");
-            self.room_send("No game in progress.").await?;
+    pub async fn update_room_state<T, F>(&self, callback: F) -> Result<T, ()>
+    where
+        F: FnOnce(&mut RoomState) -> Result<T, ()>,
+    {
+        let room_id = self.room.room_id().to_string();
+        let mut states = GLOBAL_ROOM_STATES.lock().await;
+        let state = states.entry(room_id.clone()).or_insert_with(|| RoomState {
+            room_id: room_id.clone(),
+            ..Default::default()
+        });
+        
+        let result = callback(state);
+        if result.is_ok() {
+            save_room_state(&room_id, state).await;
         }
+        result
+    }
 
-        match game_info_option {
+    pub async fn with_game_info<T>(&self, callback: impl FnOnce(&GameInfo) -> Result<T, ()>) -> Result<T, ()> {
+        let room_id = self.room.room_id().to_string();
+        let states = GLOBAL_ROOM_STATES.lock().await;
+        
+        let state = match states.get(&room_id) {
+            Some(s) => s,
+            None => {
+                let _ = self.room_send("No game in progress (lobby is empty).").await;
+                return Err(());
+            }
+        };
+
+        match state.game_info.as_ref() {
             Some(game_info) => callback(game_info),
-            None => Err(())
+            None => {
+                let _ = self.room_send("No game in progress in this room.").await;
+                Err(())
+            }
         }
     }
 

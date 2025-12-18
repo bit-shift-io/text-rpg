@@ -34,13 +34,11 @@ pub async fn ask(context: CommandContext) -> Result<(), ()> {
     let acting_player_member = context.sender_room_member().await?;
     let bot_name = context.bot_display_name().await.unwrap_or("Dungeon Master".to_string());
 
-    let round_info_str = {
-        let round_info_lock = GLOBAL_ROUND_INFO.lock().await;
-        if let Some(round_info) = round_info_lock.as_ref() {
+    let round_info_str = context.with_room_state(|state| {
+        if let Some(round_info) = state.round_info.as_ref() {
              let now = std::time::SystemTime::now();
              let elapsed = now.duration_since(round_info.round_start_time).unwrap_or_default();
              
-             // Hardcoded 6 hours timeout matching act.rs
              let timeout_duration = std::time::Duration::from_secs(6 * 60 * 60); 
              
              let remaining = if elapsed < timeout_duration { timeout_duration - elapsed } else { std::time::Duration::ZERO };
@@ -54,17 +52,17 @@ pub async fn ask(context: CommandContext) -> Result<(), ()> {
                  round_info.acted_players.join(", ")
              };
 
-             format!(
+             Ok(format!(
                 "Current Round Information:\n- Round Number: {}\n- Players who have acted this round: {}\n- Time remaining in round: {}h {}m",
                 round_info.round_number,
                 acted_list,
                 hours,
                 minutes
-             )
+             ))
         } else {
-            "Round Information: Not available (Game might not be started)".to_string()
+            Ok("Round Information: Not available (Game might not be started)".to_string())
         }
-    };
+    }).await.unwrap_or_else(|_| "Round Information: Not available (Game might not be started)".to_string());
 
     let act_prompt = PromptBuilder::new(ASK_PROMPT)
         .bot_name(bot_name)

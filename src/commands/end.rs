@@ -26,14 +26,14 @@ pub async fn execute_end(context: &CommandContext) -> Result<(), ()> {
     let bot_name = context.bot_display_name().await.unwrap_or("Dungeon Master".to_string());
     
     // Check if game exists
-    let game_info_guard = GLOBAL_GAME_INFO.lock().await;
-    let game_state_json = if let Some(game_info) = game_info_guard.as_ref() {
-        game_info.to_json_string().unwrap_or_default()
-    } else {
-        context.room_send("No active game to end.").await.unwrap();
-        return Ok(());
+    let game_state_json = match context.game_info_as_json().await {
+        Ok(json) => json,
+        Err(_) => {
+            // Already handled by game_info_as_json if it sends error message, 
+            // but let's be explicit if needed.
+            return Ok(());
+        }
     };
-    drop(game_info_guard); // Release lock before long await
 
     let end_prompt = PromptBuilder::new(END_PROMPT)
         .bot_name(bot_name)
@@ -60,14 +60,11 @@ pub async fn execute_end(context: &CommandContext) -> Result<(), ()> {
     }
 
     // Cleanup
-    {
-        let mut game_info = GLOBAL_GAME_INFO.lock().await;
-        *game_info = None;
-    }
-    {
-        let mut round_info = GLOBAL_ROUND_INFO.lock().await;
-        *round_info = None;
-    }
+    context.update_room_state(|state| {
+        state.game_info = None;
+        state.round_info = None;
+        Ok(())
+    }).await?;
 
     context.room_send("The game has ended. You may start a new one with .start").await.unwrap();
 

@@ -101,6 +101,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
         info!("Error syncing: {e}");
     }
 
+    // Load all room states
+    load_all_room_states().await;
+
     // Announce entry in all currently joined rooms
     let announcement = "Hello! I am online and ready to facilitate your text-based RPG adventures.\nUse the **.help** command to see available commands.";
     let content = RoomMessageEventContent::notice_markdown(announcement);
@@ -108,17 +111,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     let allowed_rooms = config.rooms.clone().unwrap_or_default();
     
     for room in bot.client().joined_rooms() {
-        let room_name = room.name().unwrap_or_default();
+        let room_name = room.name().unwrap_or_else(|| room.room_id().to_string());
         if !allowed_rooms.iter().any(|r| *r == room_name) {
             continue;
         }
 
-        let content = content.clone();
+        let room_id = room.room_id().to_string();
+        let states = GLOBAL_ROOM_STATES.lock().await;
+        let game_info_opt = states.get(&room_id).and_then(|s| s.game_info.clone());
+        drop(states);
+
+        let room_clone = room.clone();
+        let announcement = announcement.to_string();
+        
         tokio::spawn(async move {
-            if let Err(e) = room.send(content).await {
-                error!("Failed to send announcement to room {}: {:?}", room.room_id(), e);
-            } else {
-                 info!("Announced entry in room {}", room.room_id());
+            info!("Announcing entry in room {}", room_id);
+            let mut final_msg = announcement;
+
+            if let Some(game_info) = game_info_opt {
+                // Get the bot name from the room or default
+                let mut bot_name = "Dungeon Master".to_string();
+                if let Ok(members) = room_clone.members(RoomMemberships::JOIN).await {
+                    if let Some(m) = members.iter().find(|m| m.is_account_user()) {
+                        if let Some(dn) = m.display_name() {
+                            bot_name = dn.to_string();
+                        }
+                    }
+                }
+
+                if let Some(summary) = crate::services::summary::generate_story_summary(&game_info, &bot_name).await {
+                    final_msg = format!("{}\n\n**The Story So Far:**\n{}", final_msg, summary);
+                }
+            }
+
+            if let Err(e) = room_clone.send(RoomMessageEventContent::notice_markdown(final_msg)).await {
+                error!("Failed to send announcement to room {}: {:?}", room_id, e);
             }
         });
     }
@@ -138,6 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     bot.register_command(".set", set::set);
 
     
+
     // Run the bot, this should never return except on error
     if let Err(e) = bot.run().await {
         error!("Error running bot: {e}");

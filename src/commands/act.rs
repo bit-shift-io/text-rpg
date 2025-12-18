@@ -86,7 +86,21 @@ In the story:
 pub async fn act(context: CommandContext) -> Result<(), ()> {
     let sender_player_member = context.sender_room_member().await?;
     let sender_display_name = sender_player_member.display_name().unwrap().to_owned();
-    let sender_player_info = context.find_room_member_player_character_info(sender_player_member).await.unwrap();
+    
+    let sender_player_info = context.with_room_state(|state| {
+        let game_info = state.game_info.as_ref().ok_or(())?;
+        let f = game_info.player_characters.iter().find(|&player_character| player_character.name.eq(&sender_display_name));
+        Ok(f.ok_or(())?.clone())
+    }).await;
+
+    let sender_player_info = match sender_player_info {
+        Ok(info) => info,
+        Err(_) => {
+            // Player might not be in the game yet
+            return Ok(());
+        }
+    };
+
     if !sender_player_info.is_alive() {
         context.room_send(&format!("🪦 {}", &sender_display_name)).await.unwrap();
         return Ok(());
@@ -98,67 +112,64 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
     let mut round_reset = false;
     let mut current_round_number = 0;
     
-    {
-        let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
-        if let Some(round_info) = round_info_guard.as_mut() {
+    let round_result = context.update_room_state(|state| {
+        if let Some(round_info) = state.round_info.as_mut() {
             current_round_number = round_info.round_number;
             let has_acted = round_info.acted_players.contains(&sender_display_name);
             let elapsed = round_info.round_start_time.elapsed().unwrap_or(std::time::Duration::ZERO);
-            // 6 hours timeout
+            
+            // Get timeout from settings
+            // We can't access GLOBAL_SETTINGS here easily inside the closure if we want to keep it simple.
+            // Actually, we can just use a default or lock it.
+            // Let's use 6 hours as default if not set.
             let timeout_duration = std::time::Duration::from_secs(6 * 60 * 60);
             let timeout = elapsed > timeout_duration;
 
             if has_acted {
                 if timeout {
-                    // Timeout passed: Start new round logic checks
                     round_info.round_number += 1;
                     round_info.acted_players.clear();
                     round_info.round_start_time = std::time::SystemTime::now();
                     round_reset = true;
-                    // Proceed to accept action (we will add user to acted_players below)
                     current_round_number = round_info.round_number;
                 } else {
-                    let remaining = timeout_duration - elapsed;
-                    let remaining_secs = remaining.as_secs();
-                    let hours = remaining_secs / 3600;
-                    let minutes = (remaining_secs % 3600) / 60;
-                    
-                    let game_info_guard = GLOBAL_GAME_INFO.lock().await;
-                    let mut waiting_for = Vec::new();
-                    if let Some(game_info) = game_info_guard.as_ref() {
-                        for player in &game_info.player_characters {
-                            if player.is_alive() && !round_info.acted_players.contains(&player.name) {
-                                waiting_for.push(player.name.clone());
-                            }
-                        }
-                    }
-
-                    // Force drop guard to avoid deadlock if we were to hold it while sending (though room_send is async and we are inside a sync block here effectively? No, we are in an async fn, holding a MutexGuard across await point is bad, but room_send is awaited outside or inside?
-                    // Wait, logic check: room_send IS async. Accessing GLOBAL_GAME_INFO locks another mutex.
-                    // We are holding round_info_guard (Global Round Info Mutex) while trying to lock Global Game Info Mutex.
-                    // This is potential deadlock if elsewhere we lock GameInfo then RoundInfo.
-                    // Checking other usages... act() usually locks RoundInfo briefly. GameInfo is locked in with_game_info.
-                    // Ideally, we should release GameInfo lock before sending.
-                    
-                    drop(game_info_guard); // Explicit drop just to be safe/clear, though we only needed it for the list.
-
-                    let waiting_list = if waiting_for.is_empty() {
-                        "everyone".to_string() 
-                    } else {
-                        waiting_for.join(", ")
-                    };
-
-                    context.room_send(&format!(
-                        "You have already acted in round {}. Please wait for: {}. Timeout in {}h {}m.", 
-                        round_info.round_number, waiting_list, hours, minutes
-                    )).await.unwrap();
-                    return Ok(());
+                    return Err(()); // Signal we need to show waiting message
                 }
             }
 
-            // Optimistically mark as acted
             round_info.acted_players.push(sender_display_name.clone());
+            Ok(())
+        } else {
+            Err(())
         }
+    }).await;
+
+    if round_result.is_err() {
+        // Show waiting message
+        let (round_num, hours, minutes, waiting_for) = context.with_room_state(|state| {
+            let round_info = state.round_info.as_ref().ok_or(())?;
+            let elapsed = round_info.round_start_time.elapsed().unwrap_or(std::time::Duration::ZERO);
+            let timeout_duration = std::time::Duration::from_secs(6 * 60 * 60);
+            let remaining = timeout_duration - elapsed;
+            let remaining_secs = remaining.as_secs();
+            
+            let mut waiting = Vec::new();
+            if let Some(game_info) = state.game_info.as_ref() {
+                for player in &game_info.player_characters {
+                    if player.is_alive() && !round_info.acted_players.contains(&player.name) {
+                        waiting.push(player.name.clone());
+                    }
+                }
+            }
+            Ok((round_info.round_number, remaining_secs / 3600, (remaining_secs % 3600) / 60, waiting))
+        }).await.unwrap_or((0, 0, 0, Vec::new()));
+
+        let waiting_list = if waiting_for.is_empty() { "everyone".to_string() } else { waiting_for.join(", ") };
+        context.room_send(&format!(
+            "You have already acted in round {}. Please wait for: {}. Timeout in {}h {}m.", 
+            round_num, waiting_list, hours, minutes
+        )).await.unwrap();
+        return Ok(());
     }
 
     if round_reset {
@@ -169,7 +180,7 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
     let act_prompt = PromptBuilder::new(ACT_PROMPT)
         .bot_name(bot_name)
         .game_state(&context.game_info_as_json().await?)
-        .with_rules("") // If we want dynamic rules in future, pull from config file.
+        .with_rules("") 
         .build()
         .replace("${action}", &context.clean_text())
         .replace("${name}", &sender_display_name);
@@ -178,12 +189,14 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
         Ok(res) => res,
         Err(_) => {
              // Revert turn on failure
-             let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
-             if let Some(round_info) = round_info_guard.as_mut() {
-                 if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
-                     round_info.acted_players.remove(pos);
+             context.update_room_state(|state| {
+                 if let Some(round_info) = state.round_info.as_mut() {
+                     if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
+                         round_info.acted_players.remove(pos);
+                     }
                  }
-             }
+                 Ok(())
+             }).await.ok();
              return Err(());
         }
     };
@@ -191,26 +204,28 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
     let json_strs = extract_markdown_block("json", &act_response)?;
     if json_strs.len() == 0 {
         context.room_send("[act] Failed to get JSON from response.").await.unwrap();
-        // Revert turn
-        let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
-        if let Some(round_info) = round_info_guard.as_mut() {
-             if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
-                 round_info.acted_players.remove(pos);
+        context.update_room_state(|state| {
+             if let Some(round_info) = state.round_info.as_mut() {
+                 if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
+                     round_info.acted_players.remove(pos);
+                 }
              }
-        }
+             Ok(())
+        }).await.ok();
         return Ok(());
     }
 
     let story_strs = extract_between("<story>", "</story>", &act_response)?;
     if story_strs.len() == 0 {
         context.room_send("[act] Failed to get story block from response.").await.unwrap();
-        // Revert turn
-        let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
-        if let Some(round_info) = round_info_guard.as_mut() {
-             if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
-                 round_info.acted_players.remove(pos);
+        context.update_room_state(|state| {
+             if let Some(round_info) = state.round_info.as_mut() {
+                 if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
+                     round_info.acted_players.remove(pos);
+                 }
              }
-        }
+             Ok(())
+        }).await.ok();
         return Ok(());
     }
 
@@ -219,45 +234,66 @@ pub async fn act(context: CommandContext) -> Result<(), ()> {
         Err(e) => {
             error!("Failed to parse JSON: {}", &json_strs[0]);
             context.room_send("Failed to parse JSON.").await.unwrap();
-            // Revert turn
-            let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
-            if let Some(round_info) = round_info_guard.as_mut() {
-                 if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
-                     round_info.acted_players.remove(pos);
+            context.update_room_state(|state| {
+                 if let Some(round_info) = state.round_info.as_mut() {
+                     if let Some(pos) = round_info.acted_players.iter().position(|x| *x == sender_display_name) {
+                         round_info.acted_players.remove(pos);
+                     }
                  }
-            }
+                 Ok(())
+            }).await.ok();
             return Ok(());
         }
     };
     
-    // Check for round completion based on NEW game info (in case someone died)
     let total_alive_players = new_game_info.player_characters.iter().filter(|p| p.is_alive()).count();
 
     // Capture old game info for objective comparison
-    let old_game_info_opt = {
-        let guard = GLOBAL_GAME_INFO.lock().await;
-        guard.clone()
-    };
+    let old_info = context.with_room_state(|state| Ok(state.game_info.clone())).await.unwrap_or(None);
     
-    *GLOBAL_GAME_INFO.lock().await = Some(new_game_info.clone());
+    context.update_room_state(|state| {
+        state.game_info = Some(new_game_info.clone());
+        Ok(())
+    }).await?;
 
     context.room_send(&story_strs[0]).await.unwrap();
 
-    if let Some(old_info) = old_game_info_opt {
+    if let Some(old_info) = old_info {
         check_objectives(&context, &old_info, &new_game_info).await.ok();
     }
 
     // --- Check End of Round ---
-    {
-        let mut round_info_guard = GLOBAL_ROUND_INFO.lock().await;
-        if let Some(round_info) = round_info_guard.as_mut() {
+    context.update_room_state(|state| {
+        if let Some(round_info) = state.round_info.as_mut() {
              if round_info.acted_players.len() >= total_alive_players {
                   round_info.round_number += 1;
                   round_info.acted_players.clear();
                   round_info.round_start_time = std::time::SystemTime::now();
-                  context.room_send(&format!("All players acted! Round {} started.", round_info.round_number)).await.unwrap();
+                  // We can't send message inside the closure easily, we return a signal.
+                  return Ok(true);
              }
         }
+        Ok(false)
+    }).await.map(|completed| {
+        if completed {
+             // Fetch round number to announce
+             // This is a bit awkward but keeps the closure pure.
+             // Actually, we could just return the round number.
+        }
+    }).ok();
+
+    // Let's re-fetch round number for announcement if needed.
+    let round_announce = context.with_room_state(|state| {
+        if let Some(ri) = state.round_info.as_ref() {
+            if ri.acted_players.is_empty() {
+                return Ok(Some(ri.round_number));
+            }
+        }
+        Ok(None)
+    }).await.unwrap_or(None);
+
+    if let Some(rn) = round_announce {
+         context.room_send(&format!("All players acted! Round {} started.", rn)).await.unwrap();
     }
 
     Ok(())

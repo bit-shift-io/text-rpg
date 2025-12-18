@@ -1,13 +1,19 @@
 use crate::services::command_context::CommandContext;
-use crate::globals::GLOBAL_LOBBY;
 use tracing::info;
 
 pub async fn leave(context: CommandContext) -> Result<(), ()> {
     let sender = context.sender.to_string();
-    let mut lobby = GLOBAL_LOBBY.lock().await;
+    
+    let left = context.update_room_state(|state| {
+        if let Some(pos) = state.lobby.iter().position(|x| *x == sender) {
+            state.lobby.remove(pos);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }).await?;
 
-    if let Some(pos) = lobby.iter().position(|x| *x == sender) {
-        lobby.remove(pos);
+    if left {
         context.room_send(&format!("{} has left the party.", context.sender.localpart())).await.unwrap();
         info!("Player left: {}", context.sender);
     } else {
