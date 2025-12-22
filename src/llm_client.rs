@@ -1,161 +1,230 @@
 use crate::config::Config;
-use genai::adapter::AdapterKind;
-use genai::chat::{ChatMessage, ChatRequest};
-use genai::Client;
-use genai::resolver::AuthData;
-use genai::chat::printer::print_chat_stream;
-use tracing::{info, warn};
+use crate::discovery::list_gemini_models;
+use rig::providers::openai::Client as OpenAIClient;
+use rig::providers::gemini::Client as GeminiClient;
+use rig::providers::openai::Client as GroqClient; // Rig uses OpenAI client for Groq too
+use rig::completion::message::Message as ChatCompletionMessage;
+use rig::providers::openai::responses_api::Role;
+use rig::client::{ProviderClient, CompletionClient};
+use rig::completion::{CompletionModel, Completion}; // CompletionModel for trait bounds, Completion for the trait itself
+use rig::OneOrMany; // Import OneOrMany
+use rig::agent::Agent;
+use async_trait::async_trait;
+use tracing::{info, warn, error};
 use std::fmt;
+use crate::discovery::list_all_models;
 
-#[derive(Debug)]
+#[async_trait]
+pub trait AbstractAgent: Send + Sync {
+    fn model_name(&self) -> &String;
+    async fn perform_chat_completion(
+        &self,
+        messages: Vec<ChatCompletionMessage>,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+#[async_trait]
+impl<M> AbstractAgent for Agent<M>
+where
+    M: CompletionModel + Send + Sync + 'static,
+    Agent<M>: Completion<M>,
+{
+    fn model_name(&self) -> &String {
+        unimplemented!("model_name should be retrieved from LlmClient's model field")
+    }
+
+    async fn perform_chat_completion(
+        &self,
+        messages: Vec<ChatCompletionMessage>,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let first_message = messages.first().unwrap().clone();
+        let chat_history = messages[1..].to_vec();
+
+        let completion_request_builder = self.completion(
+            first_message,
+            chat_history,
+        ).await?;
+
+        let completion_response = completion_request_builder.send().await?;
+
+        let assistant_content_one_or_many = &completion_response.choice;
+
+        // Iterate over the OneOrMany struct
+        if let Some(first_text_content) = assistant_content_one_or_many.iter().find_map(|ac| {
+            match ac {
+                rig::completion::AssistantContent::Text(text) => Some(text.clone()),
+                rig::completion::AssistantContent::ToolCall(tool_call) => {
+                    warn!("Received a tool call instead of text: {:?}", tool_call);
+                    None // Skip tool calls
+                },
+                rig::completion::AssistantContent::Reasoning(reasoning) => {
+                    warn!("Received a reasoning content, skipping: {:?}", reasoning);
+                    None // Skip reasoning
+                },
+                rig::completion::AssistantContent::Image(image) => {
+                    warn!("Received an image content, skipping: {:?}", image);
+                    None // Skip image
+                }
+            }
+        }) {
+            Ok(first_text_content.to_string())
+        } else {
+            warn!("Received assistant content, but no text content found.");
+            Err(Box::<dyn std::error::Error + Send + Sync>::from("Received assistant content, but no text content found."))
+        }
+    }
+}
+
 pub struct LlmClient {
-    client: Client,
+    config: Config,
     models: Vec<String>,
-    adapter_kinds: Vec<AdapterKind>,
     model_idx: usize,
+    agent: Option<Box<dyn AbstractAgent>>,
 }
 
 impl LlmClient {
-    pub fn new(config: Config) -> Self {
-        let client_builder = Client::builder();
-        let client = Client::default();
-        let mut models = vec![];
-        let mut adapter_kinds = vec![];
-
-        if config.models.is_some() {
-            models = config.models.unwrap();             
-        }
-
+    pub async fn new(config: Config) -> Self {
         if config.gemini_api_key.is_some() {
             unsafe {
-                std::env::set_var("GEMINI_API_KEY", config.gemini_api_key.unwrap());
+                std::env::set_var("GEMINI_API_KEY", config.gemini_api_key.as_ref().unwrap());
             }
-            adapter_kinds.push(AdapterKind::Gemini);
         }
 
         if config.groq_api_key.is_some() {
             unsafe {
-                std::env::set_var("GROQ_API_KEY", config.groq_api_key.unwrap());
+                std::env::set_var("GROQ_API_KEY", config.groq_api_key.as_ref().unwrap());
             }
-            adapter_kinds.push(AdapterKind::Groq);
         }
 
         if config.openai_api_key.is_some() {
             unsafe {
-                std::env::set_var("OPENAI_API_KEY", config.openai_api_key.unwrap());
+                std::env::set_var("OPENAI_API_KEY", config.openai_api_key.as_ref().unwrap());
             }
-            adapter_kinds.push(AdapterKind::OpenAI);
         }
+
+        let mut discovered_models = list_all_models(config.clone()).await;
         
-        LlmClient {
-             client: client_builder.build(),
-             models,
-             adapter_kinds,
-             model_idx: 0,
-        }
-    }
-
-    pub fn model(&self) -> &String {
-        &self.models[self.model_idx]
-    }
-
-    pub async fn populate_models(&mut self) {
-        // https://github.com/jeremychone/rust-genai/blob/main/examples/c05-model-names.rs
-        for kind in &self.adapter_kinds {
-            let models = match self.client.all_model_names(*kind).await {
-                Ok(response) => response,
-                Err(e) => {
-                    warn!("[populate_models] all_model_names failed for kind '{}': {}", kind, e);
-                    return ();
-                },
-            };
-
-            self.models.extend(models);
-        }
-    }
-
-    pub async fn chat(&self, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        // https://github.com/jeremychone/rust-genai/tree/main/examples
-        let chat_req = ChatRequest::new(vec![
-            ChatMessage::user(prompt.to_string()),
-        ]);
-
-        //let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
-        let model = &self.models[self.model_idx];
-        match self.client.exec_chat(model, chat_req.clone(), None).await {
-            Ok(response) => {
-                return Ok(response.first_text().unwrap_or("NO ANSWER").to_string())
-
-                // match print_chat_stream(response, None).await {
-                //     Ok(content) => return Ok(content),
-                //     Err(e) => {
-                //         warn!("Failed to read stream from model '{}': {}", model, e);
-                //         //last_error = Some(Box::new(e));
-                //         return Err(e.into());
-                //     }
-                // }
-            },
-            Err(e) => {
-                warn!("Model '{}' failed: {}", model, e);
-                // Check if we should retry based on error type? 
-                // For now, we assume standard "try next" behavior for robustness.
-                //last_error = Some(e.into());
-                return Err(e.into());
-            }
-        }
-
-        // if let Some(e) = last_error {
-        //      return Err(format!("All models failed. Last error: {}", e).into());
-        // }
-
-        // Err("No models configured or available.".into())
-    }
-
-    pub async fn chat_with_retry(&mut self, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let model_idx = self.model_idx;
-        let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>>;// = None;
-
-        loop {
-            let res = self.chat(&prompt).await;
-            match res {
-                Ok(result) => {
-                    //info!("[chat_with_retry] result: {}", result);
-                    return Ok(result)
-                },
-                Err(e) => {
-                    //error!("[execute_prompt] Failed to execute prompt: {}", e);
-                    self.move_to_next_adapter_or_model();
-                    last_error = Some(e.into());
-                    //self.room.send(RoomMessageEventContent::notice_plain(format!("[execute_prompt] Failed to execute prompt: {}", e))).await.unwrap();
-                    //Err(())
+        // If config has specific models, prepend them to the list or use them as primary
+        let mut final_models = Vec::new();
+        if let Some(config_models) = &config.models {
+            for m in config_models {
+                if !final_models.contains(m) {
+                    final_models.push(m.clone());
                 }
             }
+        }
+        
+        for m in discovered_models {
+            if !final_models.contains(&m) {
+                final_models.push(m);
+            }
+        }
 
-            if model_idx == self.model_idx {
+        let mut client = LlmClient {
+            config,
+            models: final_models,
+            model_idx: 0,
+            agent: None,
+        };
+
+        client.update_agent();
+        client
+    }
+
+    fn update_agent(&mut self) {
+        if self.models.is_empty() {
+            self.agent = None;
+            return;
+        }
+
+        let model_full_name = &self.models[self.model_idx];
+        let parts: Vec<&str> = model_full_name.split('/').collect();
+        
+        if parts.len() < 2 {
+            warn!("Invalid model name format: {}", model_full_name);
+            self.agent = None;
+            return;
+        }
+
+        let provider = parts[0];
+        let model_name = parts[1];
+
+        match provider {
+            "openai" => {
+                let rig_client = OpenAIClient::from_env();
+                let agent_instance = rig_client.agent(model_name).build();
+                self.agent = Some(Box::new(agent_instance));
+            },
+            "gemini" => {
+                let rig_client = GeminiClient::from_env();
+                let agent_instance = rig_client.agent(model_name).build();
+                self.agent = Some(Box::new(agent_instance));
+            },
+            // "groq" => {
+            //     // Groq uses OpenAI protocol but different base URL and env var
+            //     // Rig might have specific Groq support or we use OpenAI with custom config
+            //     // For now assuming Rig has a way to handle Groq if we set the env var
+            //     // and use the right client if they provided one, but based on docs
+            //     // it might just be another provider.
+            //     // Let's check if Rig has a Groq provider. If not, we might need more config.
+            //     // Re-using OpenAIClient for now as a placeholder or if it's compatible.
+            //     let rig_client = GroqClient::new(
+            //         &self.config.groq_api_key.as_ref().unwrap(),
+            //         "https://api.groq.com/openai/v1"
+            //     );
+            //     let agent_instance = rig_client.agent(model_name).build();
+            //     self.agent = Some(Box::new(agent_instance));
+            // },
+            _ => {
+                warn!("Unsupported provider: {}", provider);
+                self.agent = None;
+            }
+        }
+    }
+
+    pub fn model(&self) -> String {
+        self.models.get(self.model_idx).cloned().unwrap_or_else(|| "none".to_string())
+    }
+
+    pub fn move_to_next_model(&mut self) {
+        if self.models.is_empty() {
+            return;
+        }
+        self.model_idx = (self.model_idx + 1) % self.models.len();
+        self.update_agent();
+    }
+
+    pub async fn chat(&mut self, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
+        let start_idx = self.model_idx;
+
+        loop {
+            if let Some(agent) = &self.agent {
+                let messages = vec![ChatCompletionMessage::user(prompt.to_string())];
+                info!("Trying model: {}", self.model());
+                match agent.perform_chat_completion(messages).await {
+                    Ok(response) => return Ok(response),
+                    Err(e) => {
+                        warn!("Model {} failed: {}", self.model(), e);
+                        last_error = Some(e);
+                    }
+                }
+            } else {
+                warn!("No agent available for model: {}", self.model());
+            }
+
+            self.move_to_next_model();
+            if self.model_idx == start_idx {
                 break;
             }
         }
 
-        if let Some(e) = last_error {
-             return Err(format!("All models failed. Last error: {}", e).into());
-        }
-
-        Err("No models configured or available.".into())
-    }
-
-    pub fn move_to_next_adapter_or_model(&mut self) {
-        self.model_idx += 1;
-        if self.model_idx >= self.models.len() {
-            self.model_idx = 0;
-        }
+        Err(last_error.unwrap_or_else(|| "No models available or all failed".into()))
     }
 }
 
 impl fmt::Display for LlmClient {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        //let rooms_joined = self.rooms.clone().unwrap_or_default().join(", ");
-        let models = self.models.join(", ");
-        //let adapters = self.adapter_kinds.join(", ");
-        write!(f, "models: {}", models) //, adapters)
+        write!(f, "model: {}", self.model())
     }
 }

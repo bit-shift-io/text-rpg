@@ -30,14 +30,14 @@ pub async fn generate_story_summary(game_info: &GameInfo, bot_name: &str) -> Opt
     let mut client_guard = GLOBAL_LLM_CLIENT.lock().await;
     if let Some(client) = client_guard.as_mut() {
         info!("Generating story summary for resumption...");
-        match client.chat_with_retry(&prompt).await {
+        match client.chat(&prompt).await {
             Ok(response) => {
                 if let Ok(stories) = crate::services::extract::extract_between("<story>", "</story>", &response) {
                     if !stories.is_empty() {
                         return Some(stories[0].clone());
                     }
                 }
-                Some(response) // Fallback if no tags
+                Some(response)
             },
             Err(e) => {
                 error!("Failed to generate story summary: {}", e);

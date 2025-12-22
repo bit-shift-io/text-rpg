@@ -175,10 +175,10 @@ impl CommandContext {
         let mut client_mut = GLOBAL_LLM_CLIENT.lock().await; //.as_ref();//.unwrap();
         let client = client_mut.as_mut().unwrap();
         
-        let r2 = client.chat_with_retry(&prompt).await;
+        let r2 = client.chat(&prompt).await;
         match r2 {
             Ok(result) => {
-                info!("[execute_prompt] model: {}, result: {}", client.model(), result);
+                info!("[execute_prompt] result: {}", result);
                 Ok(result)
             },
             Err(e) => {

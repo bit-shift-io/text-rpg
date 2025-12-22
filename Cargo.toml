@@ -21,7 +21,8 @@ serde_json_diff = "0.2.0"
 serde-diff = "0.4.1"
 json-strip-comments = "1.0.4"
 reqwest = "0.12.9"
-genai = "0.5.0-alpha.4"
+rig-core = "0.27.0"
+async-trait = "0.1.89"
 #serde-xml-rs = "0.6.0"
 
 #[build]

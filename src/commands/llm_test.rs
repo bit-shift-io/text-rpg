@@ -6,7 +6,7 @@ use tracing::{info, error};
 pub async fn llm_test(context: CommandContext) -> Result<(), ()> {
 
     let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
-    let client = LlmClient::new(config);
+    let mut client = LlmClient::new(config).await;
     let prompt = "Say hello from Rust LLM integration!";
     match client.chat(prompt).await {
         Ok(response) => {

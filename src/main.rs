@@ -27,6 +27,7 @@ mod commands;
 mod themes;
 mod settings;
 pub mod llm_client;
+pub mod discovery;
 
 use globals::*;
 use commands::*;
@@ -66,8 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> { //anyhow::Error> {
     *GLOBAL_CONFIG.lock().await = Some(config.clone());
     info!("[main] config: {}", config);
 
-    let mut llm_client = LlmClient::new(config.clone());
-    llm_client.populate_models().await;
+    let llm_client = LlmClient::new(config.clone()).await;
     info!("[main] llm: {}", llm_client);
     *GLOBAL_LLM_CLIENT.lock().await = Some(llm_client);
 
