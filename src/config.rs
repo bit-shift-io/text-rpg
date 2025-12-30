@@ -9,7 +9,9 @@ pub struct Config {
     pub gemini_api_key: Option<String>,
     pub groq_api_key: Option<String>,
     pub openai_api_key: Option<String>,
+    pub huggingface_api_key: Option<String>,
     pub models: Option<Vec<String>>,
+    pub image_models: Option<Vec<String>>,
     pub image_generation_enabled: Option<bool>,
 }
 

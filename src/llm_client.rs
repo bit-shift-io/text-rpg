@@ -1,21 +1,21 @@
 use crate::config::Config;
-use crate::discovery::list_gemini_models;
 use rig::providers::openai::Client as OpenAIClient;
 use rig::providers::gemini::Client as GeminiClient;
-use rig::providers::openai::Client as GroqClient; // Rig uses OpenAI client for Groq too
+use rig::providers::huggingface::Client as HFClient;
 use rig::completion::message::Message as ChatCompletionMessage;
 use rig::providers::openai::responses_api::Role;
 use rig::client::{ProviderClient, CompletionClient};
 use rig::client::image_generation::ImageGenerationClient;
 use rig::image_generation::ImageGenerationModel;
 use rig::providers::openai;
-use rig::completion::{CompletionModel, Completion}; // CompletionModel for trait bounds, Completion for the trait itself
-use rig::OneOrMany; // Import OneOrMany
+use rig::providers::huggingface;
+use rig::completion::{CompletionModel, Completion};
+use rig::OneOrMany;
 use rig::agent::Agent;
 use async_trait::async_trait;
 use tracing::{info, warn, error};
 use std::fmt;
-use crate::discovery::list_all_models;
+use crate::discovery::{list_all_models, ModelType};
 
 #[async_trait]
 pub trait AbstractAgent: Send + Sync {
@@ -80,53 +80,72 @@ where
 
 pub struct LlmClient {
     config: Config,
-    models: Vec<String>,
-    model_idx: usize,
+    text_models: Vec<String>,
+    text_model_idx: usize,
+    image_models: Vec<String>,
+    image_model_idx: usize,
     agent: Option<Box<dyn AbstractAgent>>,
 }
 
 impl LlmClient {
     pub async fn new(config: Config) -> Self {
-        if config.gemini_api_key.is_some() {
-            unsafe {
-                std::env::set_var("GEMINI_API_KEY", config.gemini_api_key.as_ref().unwrap());
-            }
+        if let Some(key) = &config.gemini_api_key {
+            unsafe { std::env::set_var("GEMINI_API_KEY", key); }
         }
-
-        if config.groq_api_key.is_some() {
-            unsafe {
-                std::env::set_var("GROQ_API_KEY", config.groq_api_key.as_ref().unwrap());
-            }
+        if let Some(key) = &config.groq_api_key {
+            unsafe { std::env::set_var("GROQ_API_KEY", key); }
         }
-
-        if config.openai_api_key.is_some() {
-            unsafe {
-                std::env::set_var("OPENAI_API_KEY", config.openai_api_key.as_ref().unwrap());
-            }
+        if let Some(key) = &config.openai_api_key {
+            unsafe { std::env::set_var("OPENAI_API_KEY", key); }
+        }
+        if let Some(key) = &config.huggingface_api_key {
+            unsafe { std::env::set_var("HUGGINGFACE_API_KEY", key); }
         }
 
         let discovered_models = list_all_models(config.clone()).await;
         
-        // If config has specific models, prepend them to the list or use them as primary
-        let mut final_models = Vec::new();
+        let mut final_text_models = Vec::new();
+        let mut final_image_models = Vec::new();
+
+        // Handle text models from config
         if let Some(config_models) = &config.models {
             for m in config_models {
-                if !final_models.contains(m) {
-                    final_models.push(m.clone());
+                if !final_text_models.contains(m) {
+                    final_text_models.push(m.clone());
                 }
             }
         }
         
+        // Handle image models from config
+        if let Some(config_image_models) = &config.image_models {
+            for m in config_image_models {
+                if !final_image_models.contains(m) {
+                    final_image_models.push(m.clone());
+                }
+            }
+        }
+
         for m in discovered_models {
-            if !final_models.contains(&m) {
-                final_models.push(m);
+            match m.model_type {
+                ModelType::Text => {
+                    if !final_text_models.contains(&m.name) {
+                        final_text_models.push(m.name);
+                    }
+                },
+                ModelType::Image => {
+                    if !final_image_models.contains(&m.name) {
+                        final_image_models.push(m.name);
+                    }
+                }
             }
         }
 
         let mut client = LlmClient {
             config,
-            models: final_models,
-            model_idx: 0,
+            text_models: final_text_models,
+            text_model_idx: 0,
+            image_models: final_image_models,
+            image_model_idx: 0,
             agent: None,
         };
 
@@ -135,12 +154,12 @@ impl LlmClient {
     }
 
     fn update_agent(&mut self) {
-        if self.models.is_empty() {
+        if self.text_models.is_empty() {
             self.agent = None;
             return;
         }
 
-        let model_full_name = &self.models[self.model_idx];
+        let model_full_name = &self.text_models[self.text_model_idx];
         let parts: Vec<&str> = model_full_name.split('/').collect();
         
         if parts.len() < 2 {
@@ -163,43 +182,37 @@ impl LlmClient {
                 let agent_instance = rig_client.agent(model_name).build();
                 self.agent = Some(Box::new(agent_instance));
             },
-            // "groq" => {
-            //     // Groq uses OpenAI protocol but different base URL and env var
-            //     // Rig might have specific Groq support or we use OpenAI with custom config
-            //     // For now assuming Rig has a way to handle Groq if we set the env var
-            //     // and use the right client if they provided one, but based on docs
-            //     // it might just be another provider.
-            //     // Let's check if Rig has a Groq provider. If not, we might need more config.
-            //     // Re-using OpenAIClient for now as a placeholder or if it's compatible.
-            //     let rig_client = GroqClient::new(
-            //         &self.config.groq_api_key.as_ref().unwrap(),
-            //         "https://api.groq.com/openai/v1"
-            //     );
-            //     let agent_instance = rig_client.agent(model_name).build();
-            //     self.agent = Some(Box::new(agent_instance));
-            // },
+            "groq" => {
+                // For Groq, the user might have set GROQ_API_KEY.
+                // If Rig's OpenAIClient uses OPENAI_API_KEY, we might need to swap it.
+                // However, let's try to just use from_env and assume it picks up the right ones
+                // if we set them in the LlmClient::new.
+                let rig_client = OpenAIClient::from_env();
+                let agent_instance = rig_client.agent(model_name).build();
+                self.agent = Some(Box::new(agent_instance));
+            },
             _ => {
-                warn!("Unsupported provider: {}", provider);
+                warn!("Unsupported provider for chat: {}", provider);
                 self.agent = None;
             }
         }
     }
 
     pub fn model(&self) -> String {
-        self.models.get(self.model_idx).cloned().unwrap_or_else(|| "none".to_string())
+        self.text_models.get(self.text_model_idx).cloned().unwrap_or_else(|| "none".to_string())
     }
 
     pub fn move_to_next_model(&mut self) {
-        if self.models.is_empty() {
+        if self.text_models.is_empty() {
             return;
         }
-        self.model_idx = (self.model_idx + 1) % self.models.len();
+        self.text_model_idx = (self.text_model_idx + 1) % self.text_models.len();
         self.update_agent();
     }
 
     pub async fn chat(&mut self, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
-        let start_idx = self.model_idx;
+        let start_idx = self.text_model_idx;
 
         loop {
             if let Some(agent) = &self.agent {
@@ -217,7 +230,7 @@ impl LlmClient {
             }
 
             self.move_to_next_model();
-            if self.model_idx == start_idx {
+            if self.text_model_idx == start_idx {
                 break;
             }
         }
@@ -225,21 +238,57 @@ impl LlmClient {
         Err(last_error.unwrap_or_else(|| "No models available or all failed".into()))
     }
 
-    pub async fn generate_image(&self, prompt: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-        if let Some(api_key) = &self.config.openai_api_key {
-            let openai_client = openai::Client::from_env();
-            let model = openai_client.image_generation_model("dall-e-3");
-            
-            let response = model
-                .image_generation_request()
-                .prompt(prompt)
-                .send()
-                .await?;
-            
-            return Ok(response.image);
+    pub async fn generate_image(&mut self, prompt: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+        if self.image_models.is_empty() {
+            return Err("No image models discovered".into());
         }
-        
-        Err("No image generation provider configured".into())
+
+        let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
+        let start_idx = self.image_model_idx;
+
+        loop {
+            let model_full_name = &self.image_models[self.image_model_idx];
+            info!("Trying image model: {}", model_full_name);
+            
+            let parts: Vec<&str> = model_full_name.split('/').collect();
+            if parts.len() >= 2 {
+                let provider = parts[0];
+                let model_name = parts[1..].join("/");
+
+                let result: Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> = match provider {
+                    "openai" => {
+                        let client = OpenAIClient::from_env();
+                        let model = client.image_generation_model(&model_name);
+                        model.image_generation_request().prompt(prompt).send().await
+                            .map(|resp| resp.image)
+                            .map_err(|e| e.into())
+                    },
+                    "hf" => {
+                        let client = HFClient::from_env();
+                        let model = client.image_generation_model(&model_name);
+                        model.image_generation_request().prompt(prompt).send().await
+                            .map(|resp| resp.image)
+                            .map_err(|e| e.into())
+                    },
+                    _ => Err(format!("Unsupported image provider: {}", provider).into())
+                };
+
+                match result {
+                    Ok(image_bytes) => return Ok(image_bytes),
+                    Err(e) => {
+                        warn!("Image model {} failed: {}", model_full_name, e);
+                        last_error = Some(e);
+                    }
+                }
+            }
+
+            self.image_model_idx = (self.image_model_idx + 1) % self.image_models.len();
+            if self.image_model_idx == start_idx {
+                break;
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| "All image providers failed".into()))
     }
 }
 

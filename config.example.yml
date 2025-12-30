@@ -7,6 +7,7 @@ rooms:
 gemini_api_key: "XXX"
 groq_api_key: "XXX"
 openai_api_key: "XXX"
+huggingface_api_key: "XXX"
 models: # optional - prioritise what models to try and in what order
   #- groq/compound
   - gemini-2.5-flash-lite
