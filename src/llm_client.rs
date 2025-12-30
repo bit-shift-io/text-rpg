@@ -238,6 +238,7 @@ impl LlmClient {
         Err(last_error.unwrap_or_else(|| "No models available or all failed".into()))
     }
 
+    // Based on https://github.com/0xPlaygrounds/rig/blob/main/rig/rig-core/examples/huggingface_image_generation.rs
     pub async fn generate_image(&mut self, prompt: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         if self.image_models.is_empty() {
             return Err("No image models discovered".into());
@@ -266,6 +267,17 @@ impl LlmClient {
                     "hf" => {
                         let client = HFClient::from_env();
                         let model = client.image_generation_model(&model_name);
+
+                        // let response = model
+                        //     .image_generation_request()
+                        //     .prompt("A castle sitting upon a large mountain, overlooking the water.")
+                        //     .width(1024)
+                        //     .height(1024)
+                        //     .send()
+                        //     .await
+                        //     .expect("Failed to generate image");
+
+                        // Ok(response.image)
                         model.image_generation_request().prompt(prompt).send().await
                             .map(|resp| resp.image)
                             .map_err(|e| e.into())

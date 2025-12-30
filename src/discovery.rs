@@ -139,9 +139,27 @@ pub async fn list_huggingface_models(config: Config) -> Result<Vec<ModelInfo>, S
         // Since listing all HF models might be too much, we'll just return a few common image ones for now
         // or we could check if Rig has a way to list them. 
         // For image generation, folks often use specific stable diffusion models.
+        //
+        // https://huggingface.co/models?pipeline_tag=text-to-image&inference_provider=all&sort=downloads
         Ok(vec![
             ModelInfo {
-                name: "hf/stabilityai/stable-diffusion-3-5-large".to_string(),
+                name: "hf/stabilityai/stable-diffusion-3-medium-diffusers".to_string(),
+                model_type: ModelType::Image,
+            },
+            ModelInfo {
+                name: "hf/playgroundai/playground-v2.5-1024px-aesthetic".to_string(),
+                model_type: ModelType::Image,
+            },
+            ModelInfo {
+                name: "hf/stabilityai/stable-diffusion-xl-base-1.0".to_string(),
+                model_type: ModelType::Image,
+            },
+            ModelInfo {
+                name: "hf/lightx2v/Qwen-Image-Lightning".to_string(),
+                model_type: ModelType::Image,
+            },
+            ModelInfo {
+                name: "hf/black-forest-labs/FLUX.1-dev".to_string(),
                 model_type: ModelType::Image,
             },
             ModelInfo {
