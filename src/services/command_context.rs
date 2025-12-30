@@ -3,7 +3,7 @@ use matrix_sdk::{
     media::{MediaFileHandle, MediaFormat, MediaRequest},
     room::{MessagesOptions, RoomMember},
     ruma::{
-        api::client::membership::joined_members, events::room::message::{MessageType, RoomMessageEventContent}, OwnedUserId
+        api::client::membership::joined_members, events::room::message::{ImageMessageEventContent, MessageType, RoomMessageEventContent}, OwnedUserId
     },
     Room as MatrixRoom, RoomMemberships,
 };
@@ -107,6 +107,31 @@ impl CommandContext {
             Ok(response) => Ok("".to_string()),
             Err(e) => {
                 error!("Error sending message: {}", e);
+                Err(())
+            }
+        }
+    }
+
+    pub async fn room_send_image(&self, data: Vec<u8>, filename: &str) -> Result<(), ()> {
+        let content_type = "image/png".parse::<mime::Mime>().unwrap();
+        
+        // Upload the image
+        let response = match self.room.client().media().upload(&content_type, data).await {
+            Ok(response) => response,
+            Err(e) => {
+                error!("Error uploading image: {}", e);
+                return Err(());
+            }
+        };
+
+        // Send the image message
+        let content = RoomMessageEventContent::new(MessageType::Image(
+            ImageMessageEventContent::plain(filename.to_string(), response.content_uri)
+        ));
+        match self.room.send(content).await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("Error sending image message: {}", e);
                 Err(())
             }
         }

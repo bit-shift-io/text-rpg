@@ -2,9 +2,7 @@ use tracing::{error, info};
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use regex::Regex;
 
-
-
-use crate::{services::{command_context::CommandContext, extract::{extract_between, extract_markdown_block}, game_info::GameInfo, getimgai::get_url_for_prompt, prompt_builder::PromptBuilder}};
+use crate::{services::{command_context::CommandContext, extract::{extract_between, extract_markdown_block}, game_info::GameInfo, prompt_builder::PromptBuilder}};
 use crate::globals::*;
 
 // todo: explore tool use: https://github.com/jeremychone/rust-genai/blob/main/examples/c08-tooluse.rs
@@ -124,11 +122,21 @@ pub async fn start(context: CommandContext) -> Result<(), ()> {
     context.room_send(&story_strs[0]).await.unwrap();
     context.room_send(&format!("Round {} started.", 1)).await.unwrap();
 
-    /*
     // try to generate an image for the story
-    let url = get_url_for_prompt(&story_strs[0]).await?;
-    context.room_send(&url).await.unwrap();
-    */
+    let config = GLOBAL_CONFIG.lock().await.clone().unwrap();
+    if config.image_generation_enabled.unwrap_or(false) {
+        let mut client_mut = GLOBAL_LLM_CLIENT.lock().await;
+        if let Some(client) = client_mut.as_mut() {
+            match client.generate_image(&story_strs[0]).await {
+                Ok(image_bytes) => {
+                    let _ = context.room_send_image(image_bytes, "story_image.png").await;
+                },
+                Err(e) => {
+                    error!("Failed to generate image: {}", e);
+                }
+            }
+        }
+    }
 
     Ok(())
 }

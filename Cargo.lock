@@ -3188,6 +3188,7 @@ dependencies = [
  "headjack",
  "json-strip-comments",
  "matrix-sdk",
+ "mime",
  "rand",
  "regex",
  "reqwest 0.12.26",

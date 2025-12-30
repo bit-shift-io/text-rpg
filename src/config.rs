@@ -6,11 +6,11 @@ pub struct Config {
     pub username: String,
     pub password: String,
     pub rooms: Option<Vec<String>>,
-    pub getimgai_api_key: Option<String>,
     pub gemini_api_key: Option<String>,
     pub groq_api_key: Option<String>,
     pub openai_api_key: Option<String>,
     pub models: Option<Vec<String>>,
+    pub image_generation_enabled: Option<bool>,
 }
 
 impl fmt::Display for Config {

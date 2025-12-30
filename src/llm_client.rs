@@ -6,6 +6,9 @@ use rig::providers::openai::Client as GroqClient; // Rig uses OpenAI client for 
 use rig::completion::message::Message as ChatCompletionMessage;
 use rig::providers::openai::responses_api::Role;
 use rig::client::{ProviderClient, CompletionClient};
+use rig::client::image_generation::ImageGenerationClient;
+use rig::image_generation::ImageGenerationModel;
+use rig::providers::openai;
 use rig::completion::{CompletionModel, Completion}; // CompletionModel for trait bounds, Completion for the trait itself
 use rig::OneOrMany; // Import OneOrMany
 use rig::agent::Agent;
@@ -102,7 +105,7 @@ impl LlmClient {
             }
         }
 
-        let mut discovered_models = list_all_models(config.clone()).await;
+        let discovered_models = list_all_models(config.clone()).await;
         
         // If config has specific models, prepend them to the list or use them as primary
         let mut final_models = Vec::new();
@@ -220,6 +223,23 @@ impl LlmClient {
         }
 
         Err(last_error.unwrap_or_else(|| "No models available or all failed".into()))
+    }
+
+    pub async fn generate_image(&self, prompt: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(api_key) = &self.config.openai_api_key {
+            let openai_client = openai::Client::from_env();
+            let model = openai_client.image_generation_model("dall-e-3");
+            
+            let response = model
+                .image_generation_request()
+                .prompt(prompt)
+                .send()
+                .await?;
+            
+            return Ok(response.image);
+        }
+        
+        Err("No image generation provider configured".into())
     }
 }
 

@@ -4,7 +4,6 @@ password: "XXX"
 rooms:
   - "XXX"
   - "XXX"
-getimgai_api_key: "XXX" # https://dashboard.getimg.ai/api-keys
 gemini_api_key: "XXX"
 groq_api_key: "XXX"
 openai_api_key: "XXX"
@@ -12,3 +11,4 @@ models: # optional - prioritise what models to try and in what order
   #- groq/compound
   - gemini-2.5-flash-lite
   - openai/gpt-oss-120b
+image_generation_enabled: true
